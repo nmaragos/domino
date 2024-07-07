@@ -1,0 +1,6 @@
+docx-mailmerge==0.5.0
+lxml==5.2.1
+PyQt6==6.6.1
+PyQt6-Qt6==6.6.3
+PyQt6-sip==13.6.0
+pywin32==306

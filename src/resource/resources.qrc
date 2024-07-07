@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="logo">
+    <file>domino_logo.png</file>
+  </qresource>
+  <qresource prefix="icons">
+    <file>accounting.png</file>
+  </qresource>
+</RCC>
