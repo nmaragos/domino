@@ -1,5 +1,5 @@
 {
-    "id": 2023796,
+    "id": 2023799,
     "insurance_company": [
         {
             "name": "ACCELERANT"
@@ -77,6 +77,9 @@
             "name": "≈»Õ… «"
         },
         {
+            "name": "≈À–¡"
+        },
+        {
             "name": "≈’—Ÿ–¡⁄ « –…”‘«"
         },
         {
@@ -118,6 +121,14 @@
         },
         {
             "name": "MEDITERANNIA"
+        }
+    ],
+    "insurance_extra_covers": [
+        {
+            "name": "≈À–¡"
+        },
+        {
+            "name": "BROKINS"
         }
     ],
     "insurance_type": [

@@ -1,8 +1,10 @@
 import json
 import locale
 import os
+# import pyi_splash
 import subprocess
 import sys
+
 
 from mailmerge import MailMerge
 from PyQt6 import uic
@@ -81,6 +83,7 @@ class Receipt(QMainWindow):
         self.insurance_companies = []
         self.insurance_ra = []
         self.insurance_legal = []
+        self.insurance_extra_covers = []
         self.insurance_types = []
         self.customers = []
         self.json_data = None
@@ -105,6 +108,7 @@ class Receipt(QMainWindow):
         self.cmb_insurance_type.addItems(self.insurance_types)
         self.cmb_insurance_ra.addItems(self.insurance_ra)
         self.cmb_insurance_legal.addItems(self.insurance_legal)
+        self.cmb_insurance_extra_covers.addItems(self.insurance_extra_covers)
         self.radio6.setChecked(True)
         self.date_start.setDate(QDate.currentDate())
         self.date_end.setDate(QDate.currentDate().addMonths(6))
@@ -116,6 +120,7 @@ class Receipt(QMainWindow):
         self.action_quick_receipt.triggered.connect(self.print_quick_receipt)
         self.action_version.triggered.connect(self.about)
         self.cmb_insurance_company.currentTextChanged.connect(self.check_insurance)
+        self.cmb_insurance_extra_covers.currentIndexChanged.connect(self.check_extra_covers)
         self.cmb_insurance_legal.currentIndexChanged.connect(self.check_legal)
         self.cmb_insurance_ra.currentIndexChanged.connect(self.check_ra)
         self.cmb_insurance_type.currentTextChanged.connect(self.check_type)
@@ -196,6 +201,11 @@ class Receipt(QMainWindow):
             insurance_legal.append(company["name"])
         self.insurance_legal = sorted(insurance_legal)
 
+        insurance_extra_covers = []
+        for company in self.json_data["insurance_extra_covers"]:
+            insurance_extra_covers.append(company["name"])
+        self.insurance_extra_covers = sorted(insurance_extra_covers)
+
         insurance_types = []
         for ins_type in self.json_data["insurance_type"]:
             insurance_types.append(ins_type["name"])
@@ -243,7 +253,11 @@ class Receipt(QMainWindow):
             policy_text = policy_text + \
                 ", " + self.lineedit_legal_policy.text()
 
-        if self.lineedit_ra_policy.text() or self.lineedit_legal_policy.text():
+        if self.lineedit_extra_covers_policy.text():
+            company_text = company_text + ", " + self.cmb_insurance_extra_covers.currentText()
+            policy_text = policy_text + ", " + self.lineedit_extra_covers_policy.text()
+
+        if self.lineedit_ra_policy.text() or self.lineedit_legal_policy.text() or self.lineedit_extra_covers_policy.text():
             split_company_text = company_text.split()
             split_company_text.insert(-1, "και")
             split_company_text.append("αντίστοιχα")
@@ -273,20 +287,25 @@ class Receipt(QMainWindow):
 
         # create output files from templates
         if not receipt_only:
+            doc_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "print_paralabi.docx"
+            )
             with MailMerge(TEMPLATE_PARALABI) as document:
                 document.merge(**self.doc_entries)
-                document.write("print_paralabi.docx")
+                document.write(doc_path)
 
-            print_docs.append(
-                os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    "print_paralabi.docx"
-                )
-            )
+            print_docs.append(doc_path)
+            #     os.path.join(
+            #         os.path.dirname(os.path.realpath(__file__)),
+            #         "print_paralabi.docx"
+            #     )
+            # )
 
         if self.chk_money_receipt.isChecked() or receipt_only:
             if self.lineedit_ra_policy.text() or \
-              self.lineedit_legal_policy.text():
+              self.lineedit_legal_policy.text() or \
+                self.lineedit_extra_covers_policy.text():
                 self.doc_entries["company"] = company_text.replace(
                     ",", " /"
                 ).replace(
@@ -314,7 +333,7 @@ class Receipt(QMainWindow):
             with MailMerge(
                 TEMPLATE_EISPRAXI,
                 remove_empty_tables=False,
-                auto_update_fields_on_open="no"
+                # auto_update_fields_on_open="no"
             ) as document:
                 document.merge(**self.doc_entries)
                 document.write("print_eispraxi.docx")
@@ -367,7 +386,8 @@ class Receipt(QMainWindow):
             self.print_document(print_docs[1], tray_number=260, black_ink_only=True)
             self.update_receipt_number()
 
-    def print_document(self, document, tray_number, black_ink_only):
+    def print_document(self, document, tray_number, black_ink_only, msg):
+        msg.setText("Εκτύπωση απόδειξης... ")   # Specify the document type, ie Απόδειξη είσπραξης, απόδειξη παραλαβής, αίτηση κλπ
         printer_defaults = {
             "DesiredAccess": win32print.PRINTER_ALL_ACCESS
         }
@@ -483,7 +503,7 @@ class Receipt(QMainWindow):
             _open_pdf_file(pdf_filepath)
 
         if self.chk_money_receipt.isChecked():
-            self.print_document(print_docs[1], tray_number=260, black_ink_only=True)
+            self.print_document(print_docs[1], tray_number=260, black_ink_only=True, msg=info_w)
             self.update_receipt_number()
 
         info_w.accept()
@@ -513,6 +533,12 @@ class Receipt(QMainWindow):
             self.lineedit_legal_policy.setEnabled(False)
         else:
             self.lineedit_legal_policy.setEnabled(True)
+
+    def check_extra_covers(self, extra_covers):
+        if extra_covers == -1:
+            self.lineedit_extra_covers_policy.setEnabled(False)
+        else:
+            self.lineedit_extra_covers_policy.setEnabled(True)
 
     def about(self):
         show_message(
@@ -569,23 +595,25 @@ class Receipt(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    app.setStyle(QStyleFactory.create("Fusion"))
+    # app.setStyle(QStyleFactory.create("Fusion"))
 
-    dark_palette = QPalette()
-    dark_palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
-    dark_palette.setColor(QPalette.ColorRole.WindowText, QColor(208, 208, 208))
-    dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
-    dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(208, 208, 208))
-    dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(208, 208, 208))
-    dark_palette.setColor(QPalette.ColorRole.Text, QColor(208, 208, 208))
-    dark_palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
-    dark_palette.setColor(QPalette.ColorRole.ButtonText, QColor(208, 208, 208))
-    dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-    dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    # dark_palette = QPalette()
+    # dark_palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
+    # dark_palette.setColor(QPalette.ColorRole.WindowText, QColor(208, 208, 208))
+    # dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
+    # dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(208, 208, 208))
+    # dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(208, 208, 208))
+    # dark_palette.setColor(QPalette.ColorRole.Text, QColor(208, 208, 208))
+    # dark_palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
+    # dark_palette.setColor(QPalette.ColorRole.ButtonText, QColor(208, 208, 208))
+    # dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    # dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+    # dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
 
-    app.setPalette(dark_palette)
-
+    # app.setPalette(dark_palette)
+    
+    # pyi_splash.close()
+    
     window = Receipt()
     window.show()
     app.exec()
