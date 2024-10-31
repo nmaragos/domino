@@ -63,15 +63,15 @@ class Calculator(QDialog):
 
     def set_ui(self):
         self.lineedit_auto.setFocus()
-        self.lineedit_auto.setValidator(double_validator())
-        self.lineedit_legal.setValidator(double_validator())
-        self.lineedit_ra.setValidator(double_validator())
+        for lineedit in self.findChildren(QLineEdit):
+            lineedit.setValidator(double_validator())
 
     def set_signals(self):
-        self.buttonBox.accepted.connect(self.update_total)
+        self.buttonBox.accepted.connect(self.update_total) 
         self.lineedit_auto.textChanged.connect(self.calculate_total)
         self.lineedit_legal.textChanged.connect(self.calculate_total)
         self.lineedit_ra.textChanged.connect(self.calculate_total)
+        self.lineedit_extra_covers.textChanged.connect(self.calculate_total)
         self.buttonBox.button(
             QDialogButtonBox.StandardButton.Reset
         ).clicked.connect(self.reset_form)
@@ -90,6 +90,7 @@ class Calculator(QDialog):
     def calculate_total(self):
         total_cost = float(self.lineedit_auto.text().replace(",", ".") or 0.00) \
             + float(self.lineedit_legal.text().replace(",", ".") or 0.00) \
-            + float(self.lineedit_ra.text().replace(",", ".") or 0.00)
+            + float(self.lineedit_ra.text().replace(",", ".") or 0.00) \
+            + float(self.lineedit_extra_covers.text().replace(",", ".") or 0.00)
         total_cost = "{:.2f}".format(total_cost)
         self.lbl_total_amount.setText(total_cost.replace(".", ","))

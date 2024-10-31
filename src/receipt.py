@@ -38,42 +38,6 @@ RADIO_GRP_MAPPING = {
 VERSION = "1.3.0"
 
 
-# def show_message(
-#         msg_text,
-#         msg_details=None,
-#         msg_title="DOMINO Insurance",
-#         msg_type="Information"
-# ):
-#     msg_box = QMessageBox(QMessageBox.Icon.Information, msg_title, msg_text)
-
-#     if msg_type == "Question":
-#         msg_box.setIcon(QMessageBox.Icon.Question)
-#         msg_box.setStandardButtons(
-#             QMessageBox.StandardButton.Yes |
-#             QMessageBox.StandardButton.No |
-#             QMessageBox.StandardButton.Cancel
-#         )
-#     elif msg_type == "Critical":
-#         msg_box.setIcon(QMessageBox.Icon.Critical)
-#     elif msg_type == "Warning":
-#         msg_box.setIcon(QMessageBox.Icon.Warning)
-
-#     msg_box.setText(msg_text)
-#     if msg_details:
-#         msg_box.setDetailedText(msg_details)
-#     return msg_box.exec()
-
-
-# def double_validator():
-#     double_validator = QDoubleValidator()
-#     double_validator.setDecimals(2)
-#     double_validator.setLocale(
-#         QLocale(QLocale.Language.Greek, QLocale.Country.Greece)
-#     )
-#     double_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
-#     return double_validator
-
-
 class Receipt(QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -330,20 +294,19 @@ class Receipt(QMainWindow):
                 self.doc_entries["description"] = "συμβόλαιο κλάδου " + \
                     self.cmb_insurance_type.currentText()
 
+            doc_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "print_eispraxi.docx"
+            )
+
             with MailMerge(
                 TEMPLATE_EISPRAXI,
-                remove_empty_tables=False,
-                # auto_update_fields_on_open="no"
+                remove_empty_tables=False
             ) as document:
                 document.merge(**self.doc_entries)
-                document.write("print_eispraxi.docx")
+                document.write(doc_path)
 
-            print_docs.append(
-                os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    "print_eispraxi.docx"
-                )
-            )
+            print_docs.append(doc_path)
         return print_docs
 
     def update_data_file(self):
@@ -545,51 +508,6 @@ class Receipt(QMainWindow):
             f"Απόδειξη Παραλαβής και Είσπραξης Ασφαλιστηρίου Συμβολαίου \
                 v{VERSION} - DOMINO GROUP (2023)"
         )
-
-
-# class Calculator(QDialog):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-
-#         ui_file = os.path.join(os.path.dirname(__file__), "calculator.ui")
-#         uic.loadUi(ui_file, self)
-
-#         self.set_ui()
-#         self.set_signals()
-
-#     def set_ui(self):
-#         self.lineedit_auto.setFocus()
-#         self.lineedit_auto.setValidator(double_validator())
-#         self.lineedit_legal.setValidator(double_validator())
-#         self.lineedit_ra.setValidator(double_validator())
-
-#     def set_signals(self):
-#         self.buttonBox.accepted.connect(self.update_total)
-#         self.lineedit_auto.textChanged.connect(self.calculate_total)
-#         self.lineedit_legal.textChanged.connect(self.calculate_total)
-#         self.lineedit_ra.textChanged.connect(self.calculate_total)
-#         self.buttonBox.button(
-#             QDialogButtonBox.StandardButton.Reset
-#         ).clicked.connect(self.reset_form)
-
-#     def reset_form(self):
-#         for lineedit in self.findChildren(QLineEdit):
-#             lineedit.clear()
-
-#         self.lineedit_auto.setFocus()
-
-#     def update_total(self):
-#         self.parent.lineedit_amount.setText(
-#             self.lbl_total_amount.text()
-#         )
-
-#     def calculate_total(self):
-#         total_cost = float(self.lineedit_auto.text().replace(",", ".") or 0.00) \
-#             + float(self.lineedit_legal.text().replace(",", ".") or 0.00) \
-#             + float(self.lineedit_ra.text().replace(",", ".") or 0.00)
-#         total_cost = "{:.2f}".format(total_cost)
-#         self.lbl_total_amount.setText(total_cost.replace(".", ","))
 
 
 if __name__ == "__main__":
