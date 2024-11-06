@@ -1,1 +1,2 @@
-src/.idea/workspace.xml
+src/.idea/*
+src/__pycache__/*
