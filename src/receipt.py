@@ -1,7 +1,7 @@
 import json
 import locale
 import os
-# import pyi_splash
+import pyi_splash
 import subprocess
 import sys
 
@@ -17,7 +17,7 @@ import win32print
 from helpers import Calculator, show_message
 
 UI_FILE = os.path.join(os.path.dirname(__file__), "receipt.ui")
-DATA_FILE = os.path.join(os.path.dirname(__file__), "record.json")
+DATA_FILE = os.path.join("//DOM-SRV-01/DominoInsurance/software/record.json")
 TEMPLATE_EISPRAXI = os.path.join(
     os.path.dirname(__file__),
     "resource",
@@ -137,7 +137,7 @@ class Receipt(QMainWindow):
                 self.json_data = json.load(file_to_read)
         except OSError as e:
             show_message(
-                "Unable to open data file. \n{0}".format(e),
+                f"Unable to open data file. \n{e}",
                 msg_title="Error",
                 msg_type="Critical",
             )
@@ -320,7 +320,7 @@ class Receipt(QMainWindow):
                 )
         except OSError as e:
             show_message(
-                "Unable to update data file. \n{}".format(e),
+                f"Unable to update data file. \n{e}",
                 msg_type="Warning"
             )
 
@@ -332,7 +332,11 @@ class Receipt(QMainWindow):
 
     def print_quick_receipt(self):
         print_docs = self.prepare_printing(receipt_only=True)
-        self.print_document(print_docs[0], tray_number=260, black_ink_only=True)
+        self.print_document(
+            print_docs[0],
+            tray_number=260,
+            black_ink_only=True
+        )
         self.update_receipt_number()
 
     def print_receipt(self):
@@ -346,11 +350,19 @@ class Receipt(QMainWindow):
         self.print_document(print_docs[0], print_tray, black_ink_only=True)
 
         if self.chk_money_receipt.isChecked():
-            self.print_document(print_docs[1], tray_number=260, black_ink_only=True)
+            self.print_document(
+                print_docs[1],
+                tray_number=260,
+                black_ink_only=True
+            )
             self.update_receipt_number()
 
-    def print_document(self, document, tray_number, black_ink_only, msg):
-        msg.setText("Εκτύπωση απόδειξης... ")   # Specify the document type, ie Απόδειξη είσπραξης, απόδειξη παραλαβής, αίτηση κλπ
+    def print_document(self, document, tray_number, black_ink_only):
+        info_w = show_message(
+            msg_text="Εκτύπωση εγγράφων...",
+            msg_type="no_buttons"
+        )
+
         printer_defaults = {
             "DesiredAccess": win32print.PRINTER_ALL_ACCESS
         }
@@ -394,9 +406,14 @@ class Receipt(QMainWindow):
         devmode.Duplex = reset_printer_duplex
         win32print.SetPrinter(printer_handle, 2, properties, 0)
 
+        info_w.accept()
+
     def e_sign(self):
 
-        info_w = show_message(msg_text="Προετοιμασία εγγράφων...", msg_type="no_buttons")
+        info_w = show_message(
+            msg_text="Προετοιμασία εγγράφων...",
+            msg_type="no_buttons"
+        )
 
         def _open_pdf_file(pdf_filepath):
             try:
@@ -407,7 +424,7 @@ class Receipt(QMainWindow):
                 word.Quit()
             except Exception as e:
                 show_message(
-                    "Unable to save file\n{0}\n{1}".format(pdf_filepath, e),
+                    f"Unable to save file\n{pdf_filepath}\n{e}",
                     msg_title="Error",
                     msg_type="Critical"
                 )
@@ -443,7 +460,7 @@ class Receipt(QMainWindow):
 
         if not os.path.isdir(pdf_dir):
             msg_reply = show_message(
-                "New directory will be created:\n{0}".format(pdf_dir),
+                f"New directory will be created:\n{pdf_dir}",
                 msg_type="Question"
             )
             if msg_reply == QMessageBox.StandardButton.Yes:
@@ -451,10 +468,10 @@ class Receipt(QMainWindow):
                     os.makedirs(pdf_dir)
                 except OSError as e:
                     show_message(
-                        "Unable to create directories\n{0}".format(pdf_dir),
+                        f"Unable to create directories\n{pdf_dir}",
                         msg_type="Critical",
                         msg_title="Error",
-                        msg_details="{}".format(e)
+                        msg_details=f"{e}"
                     )
                     return
                 _open_pdf_file(pdf_filepath)
@@ -466,7 +483,11 @@ class Receipt(QMainWindow):
             _open_pdf_file(pdf_filepath)
 
         if self.chk_money_receipt.isChecked():
-            self.print_document(print_docs[1], tray_number=260, black_ink_only=True, msg=info_w)
+            self.print_document(
+                print_docs[1],
+                tray_number=260,
+                black_ink_only=True
+            )
             self.update_receipt_number()
 
         info_w.accept()
@@ -480,7 +501,10 @@ class Receipt(QMainWindow):
             self.cmb_insurance_type.setCurrentText("ΑΥΤΟΚΙΝΗΤΟΥ")
 
     def check_type(self, ins_type):
-        if ins_type not in ["ΑΥΤΟΚΙΝΗΤΟΥ", "ΝΟΜΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", "ΟΔΙΚΗΣ ΒΟΗΘΕΙΑΣ"]:
+        if ins_type not in [
+            "ΑΥΤΟΚΙΝΗΤΟΥ",
+            "ΝΟΜΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ","ΟΔΙΚΗΣ ΒΟΗΘΕΙΑΣ"
+        ]:
             self.lineedit_plate.setEnabled(False)
         else:
             self.lineedit_plate.setEnabled(True)
@@ -513,7 +537,7 @@ class Receipt(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # app.setStyle(QStyleFactory.create("Fusion"))
+    app.setStyle(QStyleFactory.create("Fusion"))
 
     # dark_palette = QPalette()
     # dark_palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
@@ -529,9 +553,9 @@ if __name__ == "__main__":
     # dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
 
     # app.setPalette(dark_palette)
-    
-    # pyi_splash.close()
-    
+
+    pyi_splash.close()
+
     window = Receipt()
     window.show()
     app.exec()
