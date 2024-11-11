@@ -494,23 +494,24 @@
    <widget class="QPushButton" name="btn_print">
     <property name="geometry">
      <rect>
-      <x>430</x>
-      <y>250</y>
-      <width>91</width>
-      <height>41</height>
+      <x>425</x>
+      <y>310</y>
+      <width>100</width>
+      <height>50</height>
      </rect>
     </property>
     <property name="text">
-     <string>Εκτύπωση</string>
+     <string>Εκτύπωση
+Απόδ. Είσπραξης</string>
     </property>
    </widget>
    <widget class="QPushButton" name="btn_exit">
     <property name="geometry">
      <rect>
       <x>430</x>
-      <y>490</y>
+      <y>480</y>
       <width>91</width>
-      <height>31</height>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
@@ -521,7 +522,7 @@
     <property name="geometry">
      <rect>
       <x>430</x>
-      <y>450</y>
+      <y>430</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -588,10 +589,10 @@
    <widget class="QPushButton" name="btn_e_sign">
     <property name="geometry">
      <rect>
-      <x>430</x>
-      <y>300</y>
-      <width>91</width>
-      <height>41</height>
+      <x>425</x>
+      <y>250</y>
+      <width>100</width>
+      <height>50</height>
      </rect>
     </property>
     <property name="text">
@@ -639,7 +640,10 @@
   </action>
   <action name="action_quick_receipt">
    <property name="text">
-    <string>Απόδειξη Είσπραξης</string>
+    <string>Εκτύπωση Εγγράφων</string>
+   </property>
+   <property name="toolTip">
+    <string>Εκτύπωση απόδειξης παραλαβής και είσπραξης</string>
    </property>
   </action>
   <action name="action_version">
