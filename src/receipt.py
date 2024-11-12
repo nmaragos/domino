@@ -1,7 +1,7 @@
 import json
 import locale
 import os
-import pyi_splash
+# import pyi_splash
 import subprocess
 import sys
 
@@ -81,7 +81,7 @@ class Receipt(QMainWindow):
             cmb.setCurrentIndex(-1)
 
     def set_signals(self):
-        self.action_quick_receipt.triggered.connect(self.print_quick_receipt)
+        self.action_quick_receipt.triggered.connect(self.print_receipt)
         self.action_version.triggered.connect(self.about)
         self.cmb_insurance_company.currentTextChanged.connect(self.check_insurance)
         self.cmb_insurance_extra_covers.currentIndexChanged.connect(self.check_extra_covers)
@@ -95,7 +95,7 @@ class Receipt(QMainWindow):
         self.btn_reset.clicked.connect(self.clear_ui)
         self.btn_e_sign.clicked.connect(self.e_sign)
         self.btn_exit.clicked.connect(QCoreApplication.instance().quit)
-        self.btn_print.clicked.connect(self.print_receipt)
+        self.btn_print.clicked.connect(self.print_quick_receipt)
 
     def eventFilter(self, watched, event):
         if watched == self.lineedit_amount and \
@@ -554,7 +554,7 @@ if __name__ == "__main__":
 
     # app.setPalette(dark_palette)
 
-    pyi_splash.close()
+    # pyi_splash.close()
 
     window = Receipt()
     window.show()
