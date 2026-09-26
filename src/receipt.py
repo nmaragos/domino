@@ -14,7 +14,12 @@ from PyQt6.QtWidgets import *
 from win32com import client
 import win32print
 
-from helpers import Calculator, show_message
+from helpers import (
+    Calculator,
+    extract_text_from_pdf,
+    show_message,
+    show_pdf_text_preview,
+)
 
 UI_FILE = os.path.join(os.path.dirname(__file__), "receipt.ui")
 DATA_FILE = os.path.join("//DOM-SRV-01/DominoInsurance/software/record.json")
@@ -52,6 +57,10 @@ class Receipt(QMainWindow):
         self.customers = []
         self.json_data = None
         self.doc_entries = []
+        self.files_by_group = {
+            "main": [],
+            "extra": [],
+        }
 
         self.import_data(DATA_FILE)
         
@@ -63,6 +72,8 @@ class Receipt(QMainWindow):
         self.lbl_date.setText(QDate.currentDate().toString("dd/MM/yyyy"))
         self.lbl_receipt_number.setText(str(self.receipt_number))
         self.lineedit_amount.installEventFilter(self)
+        self._enable_drop_target(self.groupBox)
+        self._enable_drop_target(self.groupBox_3)
         # self.lineedit_amount.setValidator(double_validator())
         self.lineedit_customer.setCompleter(QCompleter(self.customers))
         self.lineedit_customer.setFocus()
@@ -101,9 +112,94 @@ class Receipt(QMainWindow):
         if watched == self.lineedit_amount and \
           event.type() == QEvent.Type.MouseButtonDblClick:
             self.open_calculator()
-        return QWidget.eventFilter(self, watched, event)
+
+        drop_group = self._get_drop_group(watched)
+        if drop_group:
+            if event.type() in (
+                QEvent.Type.DragEnter,
+                QEvent.Type.DragMove,
+            ) and event.mimeData().hasUrls():
+                event.acceptProposedAction()
+                return True
+
+            if event.type() == QEvent.Type.Drop and event.mimeData().hasUrls():
+                dropped_urls = event.mimeData().urls()
+                file_names = self._extract_file_stems(dropped_urls)
+                if file_names:
+                    if drop_group == "main":
+                        self.files_by_group[drop_group] = [file_names[-1]]
+                    else:
+                        self.files_by_group[drop_group] = sorted(
+                            file_names,
+                            key=str.casefold,
+                        )
+                    self._update_files_used_label()
+
+                    dropped_files = self._extract_local_file_paths(dropped_urls)
+                    pdf_paths = [
+                        path for path in dropped_files
+                        if path.lower().endswith(".pdf")
+                    ]
+                    if pdf_paths:
+                        extracted_text, status_msg, err_msg = extract_text_from_pdf(pdf_paths[-1])
+                        show_pdf_text_preview(
+                            self,
+                            pdf_paths[-1],
+                            extracted_text,
+                            status_msg,
+                            err_msg,
+                        )
+
+                    event.acceptProposedAction()
+                    return True
+
+        return super().eventFilter(watched, event)
+
+    def _enable_drop_target(self, widget):
+        widget.setAcceptDrops(True)
+        widget.installEventFilter(self)
+
+        for child in widget.findChildren(QWidget):
+            child.setAcceptDrops(True)
+            child.installEventFilter(self)
+
+    def _get_drop_group(self, widget):
+        current_widget = widget
+
+        while current_widget:
+            if current_widget == self.groupBox_3:
+                return "main"
+            if current_widget == self.groupBox:
+                return "extra"
+            current_widget = current_widget.parentWidget()
+
+        return None
+
+    def _extract_file_stems(self, urls):
+        return [
+            os.path.splitext(os.path.basename(url.toLocalFile()))[0]
+            for url in urls
+            if url.isLocalFile()
+        ]
+
+    def _extract_local_file_paths(self, urls):
+        return [
+            url.toLocalFile()
+            for url in urls
+            if url.isLocalFile()
+        ]
+
+    def _update_files_used_label(self):
+        label_files = self.files_by_group["main"] + self.files_by_group["extra"]
+        self.lbl_files_used.setText(" | ".join(label_files) if label_files else "-")
 
     def clear_ui(self):
+        self.files_by_group = {
+            "main": [],
+            "extra": [],
+        }
+        self._update_files_used_label()
+
         for lineedit in self.findChildren(QLineEdit):
             lineedit.clear()
 

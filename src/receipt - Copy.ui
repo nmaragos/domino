@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>563</width>
-    <height>611</height>
+    <height>576</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -38,9 +38,6 @@
       <height>201</height>
      </rect>
     </property>
-    <property name="acceptDrops">
-     <bool>true</bool>
-    </property>
     <property name="title">
      <string>Συμπληρωματικές Καλύψεις</string>
     </property>
@@ -50,7 +47,7 @@
        <x>30</x>
        <y>30</y>
        <width>321</width>
-       <height>170</height>
+       <height>161</height>
       </rect>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
@@ -60,7 +57,7 @@
          <string>Οδική Βοήθεια</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -77,7 +74,7 @@
          <string>     Αρ. Συμβολαίου</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -90,7 +87,7 @@
          <string>Ν. Π. Οχήματος </string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -107,7 +104,7 @@
          <string>Αρ. Συμβολαίου</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -120,7 +117,7 @@
          <string>Extra Covers</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -133,7 +130,7 @@
          <string>Αρ. Συμβολαίου</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -160,7 +157,7 @@
       <rect>
        <x>11</x>
        <y>21</y>
-       <width>345</width>
+       <width>341</width>
        <height>22</height>
       </rect>
      </property>
@@ -239,7 +236,7 @@
       </sizepolicy>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
+      <enum>QAbstractSpinBox::NoButtons</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -274,19 +271,19 @@
       <bool>true</bool>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
+      <enum>QAbstractSpinBox::NoButtons</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
      </property>
      <property name="minimumDateTime">
       <datetime>
-       <hour>20</hour>
+       <hour>0</hour>
        <minute>0</minute>
        <second>0</second>
-       <year>2022</year>
-       <month>12</month>
-       <day>31</day>
+       <year>2023</year>
+       <month>1</month>
+       <day>1</day>
       </datetime>
      </property>
      <property name="calendarPopup">
@@ -329,11 +326,8 @@
       <height>171</height>
      </rect>
     </property>
-    <property name="acceptDrops">
-     <bool>true</bool>
-    </property>
     <property name="title">
-     <string>Κύριο Συμβόλαιο</string>
+     <string>Στοιχεία Απόδειξης</string>
     </property>
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
@@ -341,37 +335,17 @@
        <x>11</x>
        <y>30</y>
        <width>341</width>
-       <height>140</height>
+       <height>136</height>
       </rect>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Κλάδος</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
          <string>Ονοματεπώνυμο</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLineEdit" name="lineedit_policy"/>
-      </item>
-      <item row="1" column="1">
-       <widget class="QComboBox" name="cmb_insurance_company">
-        <property name="editable">
-         <bool>false</bool>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -382,22 +356,6 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_16">
-        <property name="text">
-         <string>Αρ. Κυκλοφορίας</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QLineEdit" name="lineedit_plate"/>
-      </item>
-      <item row="2" column="1">
-       <widget class="QComboBox" name="cmb_insurance_type"/>
-      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_2">
         <property name="enabled">
@@ -407,19 +365,55 @@
          <string>Ασφαλιστική Εταιρεία</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="cmb_insurance_company">
+        <property name="editable">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Κλάδος</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="cmb_insurance_type"/>
       </item>
       <item row="3" column="0">
        <widget class="QLabel" name="label_4">
         <property name="text">
-         <string>    Αρ. Συμβολαίου</string>
+         <string>    Αριθμός Συμβολαίου</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineedit_policy"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_16">
+        <property name="text">
+         <string>Αριθμός Κυκλοφορίας</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="lineedit_plate"/>
       </item>
      </layout>
     </widget>
@@ -456,7 +450,7 @@
      <string>Αρ. Απόδειξης</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignmentFlag::AlignCenter</set>
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
    <widget class="QLabel" name="lbl_date">
@@ -472,7 +466,7 @@
      <string>TextLabel</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignmentFlag::AlignCenter</set>
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
    <widget class="QLabel" name="lbl_receipt_number">
@@ -494,7 +488,7 @@
      <string>TextLabel</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignmentFlag::AlignCenter</set>
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
    <widget class="QPushButton" name="btn_print">
@@ -557,10 +551,10 @@
      <item>
       <spacer name="horizontalSpacer_2">
        <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
+        <enum>Qt::Horizontal</enum>
        </property>
        <property name="sizeType">
-        <enum>QSizePolicy::Policy::Minimum</enum>
+        <enum>QSizePolicy::Minimum</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -586,7 +580,7 @@
         <string/>
        </property>
        <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
      </item>
@@ -605,132 +599,6 @@
      <string>e-sign</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_17">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>540</y>
-      <width>91</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>115</red>
-          <green>115</green>
-          <blue>115</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>115</red>
-          <green>115</green>
-          <blue>115</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled/>
-     </palette>
-    </property>
-    <property name="font">
-     <font>
-      <italic>true</italic>
-     </font>
-    </property>
-    <property name="text">
-     <string>Χρήση αρχείων:</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lbl_files_used">
-    <property name="geometry">
-     <rect>
-      <x>130</x>
-      <y>540</y>
-      <width>391</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>115</red>
-          <green>115</green>
-          <blue>115</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>115</red>
-          <green>115</green>
-          <blue>115</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="228">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled/>
-     </palette>
-    </property>
-    <property name="font">
-     <font>
-      <italic>true</italic>
-     </font>
-    </property>
-    <property name="text">
-     <string>-</string>
-    </property>
-   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -738,7 +606,7 @@
      <x>0</x>
      <y>0</y>
      <width>563</width>
-     <height>33</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -755,15 +623,7 @@
     </property>
     <addaction name="action_version"/>
    </widget>
-   <widget class="QMenu" name="menu_2">
-    <property name="title">
-     <string>Ρυθμίσεις</string>
-    </property>
-    <addaction name="action_json"/>
-    <addaction name="actionOCR_Templates"/>
-   </widget>
    <addaction name="menu"/>
-   <addaction name="menu_2"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -789,16 +649,6 @@
   <action name="action_version">
    <property name="text">
     <string>Version</string>
-   </property>
-  </action>
-  <action name="actionOCR_Templates">
-   <property name="text">
-    <string>OCR Templates</string>
-   </property>
-  </action>
-  <action name="action_json">
-   <property name="text">
-    <string>Διαδρομή αρχείου json</string>
    </property>
   </action>
  </widget>
