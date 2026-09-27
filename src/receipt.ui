@@ -658,7 +658,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Ακολούθηση Windows</string>
+    <string>Σύμφωνα με Windows</string>
    </property>
    <property name="toolTip">
     <string>Αυτόματη εναλλαγή φωτεινού/σκοτεινού θέματος σύμφωνα με τα Windows</string>
