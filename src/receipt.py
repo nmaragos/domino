@@ -8,13 +8,20 @@ import sys
 
 from mailmerge import MailMerge
 from PyQt6 import uic
-from PyQt6.QtGui import QPalette, QColor
-from PyQt6.QtCore import QCoreApplication, QDate, QEvent, Qt, QLocale
+from PyQt6.QtCore import QCoreApplication, QDate, QEvent, Qt, QLocale, QSettings
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import *
 from win32com import client
 import win32print
 
-from helpers import Calculator, show_message
+from helpers import (
+    Calculator,
+    DarkCheckBoxBorderStyle,
+    ThemeSwitch,
+    apply_theme,
+    show_message,
+    windows_is_dark,
+)
 
 UI_FILE = os.path.join(os.path.dirname(__file__), "receipt.ui")
 DATA_FILE = os.path.join("//DOM-SRV-01/DominoInsurance/software/record.json")
@@ -35,7 +42,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 
 class Receipt(QMainWindow):
@@ -53,10 +60,49 @@ class Receipt(QMainWindow):
         self.json_data = None
         self.doc_entries = []
 
+        self.settings = QSettings("DOMINO", "Receipt")
+
         self.import_data(DATA_FILE)
-        
+
+        self.set_theme_switch()
         self.set_ui()
         self.set_signals()
+
+    def set_theme_switch(self):
+        self.action_follow_windows.setChecked(
+            self.settings.value("follow_windows", True, type=bool)
+        )
+
+        self.theme_switch = ThemeSwitch()
+
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(6, 0, 8, 0)
+        layout.setSpacing(4)
+        layout.addWidget(QLabel("☀"))
+        layout.addWidget(self.theme_switch)
+        layout.addWidget(QLabel("☾"))
+        self.menubar.setCornerWidget(container, Qt.Corner.TopRightCorner)
+
+        # keep a reference; setStyle() doesn't take ownership
+        self.chk_money_receipt_style = DarkCheckBoxBorderStyle()
+        self.chk_money_receipt.setStyle(self.chk_money_receipt_style)
+
+        self.update_theme()
+
+    def update_theme(self):
+        follow_windows = self.action_follow_windows.isChecked()
+        dark_mode = windows_is_dark() if follow_windows else None
+        if dark_mode is None:
+            dark_mode = self.settings.value("dark_mode", True, type=bool)
+
+        # don't let the switch save the Windows mode as the manual choice
+        self.theme_switch.blockSignals(True)
+        self.theme_switch.setChecked(dark_mode)
+        self.theme_switch.blockSignals(False)
+        self.theme_switch.setEnabled(not follow_windows)
+
+        apply_theme(dark_mode)
 
     def set_ui(self):
         self.action_tray1.setChecked(False)
@@ -96,6 +142,23 @@ class Receipt(QMainWindow):
         self.btn_e_sign.clicked.connect(self.e_sign)
         self.btn_exit.clicked.connect(QCoreApplication.instance().quit)
         self.btn_print.clicked.connect(self.print_quick_receipt)
+        self.theme_switch.toggled.connect(self.toggle_theme)
+        self.action_follow_windows.toggled.connect(self.toggle_follow_windows)
+        QGuiApplication.styleHints().colorSchemeChanged.connect(
+            self.windows_theme_changed
+        )
+
+    def toggle_theme(self, dark_mode):
+        apply_theme(dark_mode)
+        self.settings.setValue("dark_mode", dark_mode)
+
+    def toggle_follow_windows(self, follow_windows):
+        self.settings.setValue("follow_windows", follow_windows)
+        self.update_theme()
+
+    def windows_theme_changed(self):
+        if self.action_follow_windows.isChecked():
+            self.update_theme()
 
     def eventFilter(self, watched, event):
         if watched == self.lineedit_amount and \
@@ -538,21 +601,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     app.setStyle(QStyleFactory.create("Fusion"))
-
-    # dark_palette = QPalette()
-    # dark_palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
-    # dark_palette.setColor(QPalette.ColorRole.WindowText, QColor(208, 208, 208))
-    # dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
-    # dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(208, 208, 208))
-    # dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(208, 208, 208))
-    # dark_palette.setColor(QPalette.ColorRole.Text, QColor(208, 208, 208))
-    # dark_palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
-    # dark_palette.setColor(QPalette.ColorRole.ButtonText, QColor(208, 208, 208))
-    # dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-    # dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-    # dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-
-    # app.setPalette(dark_palette)
 
     # pyi_splash.close()
 

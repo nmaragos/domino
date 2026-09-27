@@ -617,6 +617,12 @@
     <addaction name="separator"/>
     <addaction name="action_quick_receipt"/>
    </widget>
+   <widget class="QMenu" name="menu_view">
+    <property name="title">
+     <string>Εμφάνιση</string>
+    </property>
+    <addaction name="action_follow_windows"/>
+   </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
      <string>About</string>
@@ -624,6 +630,7 @@
     <addaction name="action_version"/>
    </widget>
    <addaction name="menu"/>
+   <addaction name="menu_view"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -644,6 +651,17 @@
    </property>
    <property name="toolTip">
     <string>Εκτύπωση απόδειξης παραλαβής και είσπραξης</string>
+   </property>
+  </action>
+  <action name="action_follow_windows">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Σύμφωνα με Windows</string>
+   </property>
+   <property name="toolTip">
+    <string>Αυτόματη εναλλαγή φωτεινού/σκοτεινού θέματος σύμφωνα με τα Windows</string>
    </property>
   </action>
   <action name="action_version">
