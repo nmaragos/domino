@@ -9,6 +9,12 @@ TEMPLATES_DIR = os.path.join(
 )
 _LATIN_TO_GREEK = str.maketrans("ABEZHIKMNOPTYX", "ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ")
 _LEGAL_FORMS = {"ΕΕ", "ΟΕ", "ΙΚΕ", "ΑΕ", "ΕΠΕ", "ΑΒΕΕ", "ΜΟΝ"}
+# name_order -> (word count of a person, rewrite to "SURNAME FIRST")
+_NAME_ORDERS = {
+    "first_last": (2, lambda w: f"{w[1]} {w[0]}"),
+    "first_father_last": (3, lambda w: f"{w[2]} {w[0]}"),
+    "last_first_father": (3, lambda w: f"{w[0]} {w[1]}"),
+}
 FIELDS = ("policy", "plate", "start", "end", "amount", "customer")
 
 
@@ -69,12 +75,13 @@ def extract(text, template):
         match = re.search(pattern, text, re.MULTILINE)
         out[field] = " ".join(g.strip() for g in match.groups() if g) if match and match.groups() else None
 
-    if out.get("customer") and template.get("name_order") in ("first_father_last", "first_last"):
+    order = _NAME_ORDERS.get(template.get("name_order"))
+    if order and out.get("customer"):
+        n_words, reorder = order
         words = out["customer"].split()
-        n_words = 3 if template["name_order"] == "first_father_last" else 2
         is_person = len(words) == n_words and all(len(w) > 2 for w in words)             and not _LEGAL_FORMS.intersection(words)
         if is_person:  # companies/other shapes stay untouched
-            out["customer"] = f"{words[-1]} {words[0]}"
+            out["customer"] = reorder(words)
     if out.get("plate"):
         out["plate"] = re.sub(r"[\s-]", "", out["plate"]).upper().translate(_LATIN_TO_GREEK)
     if out.get("policy"):

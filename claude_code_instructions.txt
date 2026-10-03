@@ -16,7 +16,7 @@ TEMPLATE: templates/<insurer>_<layout>.json (UTF-8)
  "zone":"main|extra","extra_kind":"ra|legal|extra_covers  (zone extra only)",
  "detect":["text unique to this insurer AND layout"],
  "fields":{"<field>":"<regex with one capture group; several groups are joined with a space, e.g. surname + first name>"}}
-- Optional "name_order":"first_father_last" (or "first_last") if the insurer prints persons as FIRST FATHER SURNAME (customer list uses SURNAME FIRST).
+- Optional "name_order" if the insurer prints persons as FIRST FATHER SURNAME ("first_father_last"), FIRST SURNAME ("first_last") or SURNAME FIRST FATHER ("last_first_father") (customer list uses SURNAME FIRST).
 FIELDS (form fields only): policy, plate, start, end, amount, customer
 - start/end are dd/mm/yyyy, amount is total premium (Greek format 1.234,56).
 - Omit fields the document doesn't contain (plate for non-vehicle policies).

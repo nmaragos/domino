@@ -6,7 +6,7 @@ and by reading the extracted values against the PDF text.
 | insurer | templates | unresolved fields |
 |---|---|---|
 | aig | 1 (car) | none (amount anchored on the line before `Οδηγός`; fragile) |
-| allianz | 1 (car) | none |
+| allianz | 1 (car) | none (`name_order: last_first_father`) |
 | arag | 1 (legal, zone extra) | none (amount deliberately omitted) |
 | atlantiki | 2 (car, boat) | none (boat has no plate) |
 | caravela | 1 (auto) | none |
@@ -27,6 +27,6 @@ and by reading the extracted values against the PDF text.
 Extractor behaviours that templates rely on (`src/policy_extractor.py`): dates accept dd/mm/yy and are
 output as dd/mm/yyyy; plate Latin look-alike letters become Greek; spaces around `/` in policy numbers are
 removed; several capture groups in a field are joined with a space; optional template key `name_order`
-(`first_last`, `first_father_last`) rewrites person names to SURNAME FIRST (companies and initials untouched).
+(`first_last`, `first_father_last`, `last_first_father`) rewrites person names to SURNAME FIRST (companies and initials untouched).
 
 No samples yet: interasco, interfast, interlife, intersalonika, mediterrania, mineta, orizon, syndea, triglav, ydrogios.
