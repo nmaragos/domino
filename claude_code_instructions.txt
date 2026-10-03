@@ -20,7 +20,7 @@ TEMPLATE: templates/<insurer>_<layout>.json (UTF-8)
 FIELDS (form fields only): policy, plate, start, end, amount, customer
 - start/end are dd/mm/yyyy, amount is total premium (Greek format 1.234,56).
 - Omit fields the document doesn't contain (plate for non-vehicle policies).
-- "zone":"extra" templates (RA / legal / extra covers) usually need only "policy".
+- "zone":"extra" templates (RA / legal / extra covers) need "policy" and "amount" (their premium is added to the form total); no insurance_type, plate or customer needed.
 
 PER INSURER
 1. tools/dump.py samples/<insurer>; read ONE .txt, grep labels in the others. Never open PDFs.

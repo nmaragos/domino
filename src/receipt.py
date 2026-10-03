@@ -62,6 +62,8 @@ class Receipt(QMainWindow):
             "main": [],
             "extra": [],
         }
+        self.amounts = {}  # kind ("main", "ra", "legal", "extra_covers") -> amount
+        self.used_files = {}  # kind -> PDF name the policy was read from
 
         self.templates = policy_extractor.load_templates()
         self.import_data(DATA_FILE)
@@ -126,48 +128,100 @@ class Receipt(QMainWindow):
 
             if event.type() == QEvent.Type.Drop and event.mimeData().hasUrls():
                 dropped_urls = event.mimeData().urls()
-                file_names = self._extract_file_stems(dropped_urls)
-                if file_names:
-                    if drop_group == "main":
-                        self.files_by_group[drop_group] = [file_names[-1]]
-                    else:
-                        self.files_by_group[drop_group] = sorted(
-                            file_names,
-                            key=str.casefold,
-                        )
-                    self._update_files_used_label()
-
-                    dropped_files = self._extract_local_file_paths(dropped_urls)
-                    pdf_paths = [
-                        path for path in dropped_files
-                        if path.lower().endswith(".pdf")
-                    ]
-                    if pdf_paths:
-                        extracted_text, status_msg, err_msg = extract_text_from_pdf(pdf_paths[-1])
-                        if not self._autofill_from_text(extracted_text, drop_group):
-                            show_pdf_text_preview(
-                                self,
-                                pdf_paths[-1],
-                                extracted_text,
-                                status_msg,
-                                err_msg,
-                            )
-
+                dropped_files = self._extract_local_file_paths(dropped_urls)
+                pdf_paths = [
+                    path for path in dropped_files
+                    if path.lower().endswith(".pdf")
+                ]
+                if pdf_paths:
+                    self._autofill_from_pdfs(pdf_paths, drop_group)
                     event.acceptProposedAction()
                     return True
 
         return super().eventFilter(watched, event)
 
+    def _autofill_from_pdfs(self, pdf_paths, zone):
+        """Fill the form from every dropped PDF that has a template.
+
+        Main box: one policy only, so only the last PDF is used. Extra box: any
+        number of PDFs; each fills the RA / legal / extra-covers row of its own
+        kind (a later PDF of the same kind replaces the earlier one).
+        """
+        notes = []
+        if zone == "main" and len(pdf_paths) > 1:
+            notes.append(
+                "Χρησιμοποιήθηκε μόνο το τελευταίο αρχείο: "
+                + os.path.basename(pdf_paths[-1])
+            )
+            pdf_paths = pdf_paths[-1:]
+
+        unmatched, missing_msgs, kinds_seen = [], [], {}
+        for path in pdf_paths:
+            name = os.path.splitext(os.path.basename(path))[0]
+            text, _status, error = extract_text_from_pdf(path)
+            result = self._autofill_from_text(text, zone)
+            if result is None:
+                unmatched.append(f"{name} ({error})" if error else name)
+                continue
+
+            kind = result["kind"]
+            if kind in kinds_seen:
+                notes.append(
+                    f"Τα αρχεία {kinds_seen[kind]} και {name} είναι ίδιου τύπου - "
+                    f"χρησιμοποιήθηκε το {name}"
+                )
+            kinds_seen[kind] = name
+            self.used_files[kind] = name
+            if result["missing"]:
+                missing_msgs.append(f"{name}: " + ", ".join(result["missing"]))
+
+        self.files_by_group["main"] = [self.used_files["main"]] if "main" in self.used_files else []
+        self.files_by_group["extra"] = sorted(
+            (name for kind, name in self.used_files.items() if kind != "main"),
+            key=str.casefold,
+        )
+        self._update_files_used_label()
+
+        status = notes + (["Δεν βρέθηκαν: " + " | ".join(missing_msgs)] if missing_msgs else [])
+        if status:
+            self.statusbar.showMessage(" - ".join(status), 15000)
+        if unmatched:
+            show_message(
+                "Δεν βρέθηκε πρότυπο για: " + ", ".join(unmatched) + "\n"
+                "Παρακαλώ συμπληρώστε τη φόρμα χειροκίνητα.",
+                msg_details="\n".join(notes) or None,
+                msg_type="Warning",
+            )
+
+    @staticmethod
+    def _parse_amount(text):
+        """'1.234,56' -> 1234.56"""
+        return float(text.replace(".", "").replace(",", "."))
+
+    def _update_total(self):
+        """Show the sum of the amounts of all policies filled from PDFs."""
+        if not self.amounts:
+            return
+        total = f"{sum(self.amounts.values()):,.2f}"
+        self.lineedit_amount.setText(
+            total.replace(",", "_").replace(".", ",").replace("_", ".")
+        )
+
     def _autofill_from_text(self, text, zone):
-        """Fill the form from a matching template. Returns False if none matched."""
+        """Fill the form from a matching template.
+
+        Returns None if no template applies to this zone, else
+        {"kind": "main"|"ra"|"legal"|"extra_covers", "missing": [fields]}.
+        """
         template = policy_extractor.detect(text, self.templates)
         if not template or template.get("zone", "main") != zone:
-            return False
+            return None
 
         values = policy_extractor.extract(text, template)
         missing = [field for field, value in values.items() if value is None]
 
         if zone == "main":
+            kind = "main"
             self._select_combo(self.cmb_insurance_company, template.get("company"))
             # selecting the company resets the type, so set the type afterwards
             self._select_combo(self.cmb_insurance_type, template.get("insurance_type"))
@@ -183,31 +237,52 @@ class Receipt(QMainWindow):
                 ),
             }.get(kind, (None, None))
             if combo is None:
-                return False
+                return None
             self._select_combo(combo, template.get("company"))
 
         simple_fields = {
             "policy": policy_edit,
             "plate": self.lineedit_plate if zone == "main" else None,
             "customer": self.lineedit_customer if zone == "main" else None,
-            "amount": self.lineedit_amount if zone == "main" else None,
         }
         for field, widget in simple_fields.items():
             if widget is not None and values.get(field):
                 widget.setText(values[field])
 
-        if zone == "main" and (values.get("start") or values.get("end")):
-            self.radio_free.setChecked(True)  # keep the end date from the PDF
-            if values.get("start"):
-                self.date_start.setDate(QDate.fromString(values["start"], "dd/MM/yyyy"))
-            if values.get("end"):
-                self.date_end.setDate(QDate.fromString(values["end"], "dd/MM/yyyy"))
+        # each policy keeps its own amount; the form shows the sum of all of them
+        self.amounts.pop(kind, None)
+        if values.get("amount"):
+            self.amounts[kind] = self._parse_amount(values["amount"])
+        self._update_total()
 
-        if missing:
-            self.statusbar.showMessage(
-                "Δεν βρέθηκαν: " + ", ".join(missing), 10000
-            )
-        return True
+        if zone == "main" and (values.get("start") or values.get("end")):
+            start = QDate.fromString(values["start"], "dd/MM/yyyy") if values.get("start") else None
+            end = QDate.fromString(values["end"], "dd/MM/yyyy") if values.get("end") else None
+            # setChecked() doesn't emit buttonClicked, so the PDF's end date is kept
+            if start:
+                self.date_start.setDate(start)
+            if start and end:
+                self.date_end.setDate(end)
+                self._duration_radio(start, end).setChecked(True)
+            elif end:
+                self.date_end.setDate(end)
+                self.radio_free.setChecked(True)
+            else:
+                self.calculate_end_date()  # only a start date: end = start + selected duration
+
+        return {"kind": kind, "missing": missing}
+
+    def _duration_radio(self, start, end):
+        """Radio matching the policy length, or radio_free if it fits none."""
+        for radio, months in (
+            (self.radio1, 1),
+            (self.radio3, 3),
+            (self.radio6, 6),
+            (self.radio12, 12),
+        ):
+            if start.addMonths(months) == end:
+                return radio
+        return self.radio_free
 
     def _select_combo(self, combo, name):
         if not name:
@@ -261,6 +336,9 @@ class Receipt(QMainWindow):
             "main": [],
             "extra": [],
         }
+        self.amounts = {}
+        self.used_files = {}
+        self.statusbar.clearMessage()
         self._update_files_used_label()
 
         for lineedit in self.findChildren(QLineEdit):
