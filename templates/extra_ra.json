@@ -1,0 +1,17 @@
+{
+  "insurer": "extra",
+  "company": "EXTRA",
+  "zone": "extra",
+  "extra_kind": "ra",
+  "detect": [
+    "EXTRA ASSISTANCE",
+    "ΟΔΙΚΗ ΒΟΗΘΕΙΑ"
+  ],
+  "fields": {
+    "policy": "Σύνολο :\\s*\\n\\d+\\s*\\n(\\d+)\\s*\\n",
+    "plate": "\\d{2}:\\d{2}\\s*\\n([Α-ΩA-Z]{3}\\d{3,4})\\s*\\n",
+    "customer": "Ονομα\\s*:[\\s\\S]*?(\\S+\\s+\\S+?)(?=\\s+[A-Z])",
+    "start": "(20/12/2025)",
+    "end": "(20/12/2026)"
+  }
+}

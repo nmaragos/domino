@@ -1,2 +1,5 @@
 src/.idea/*
 src/__pycache__/*
+
+samples/
+tools/__pycache__/

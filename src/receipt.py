@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import *
 from win32com import client
 import win32print
 
+import policy_extractor
 from helpers import (
     Calculator,
     extract_text_from_pdf,
@@ -62,8 +63,9 @@ class Receipt(QMainWindow):
             "extra": [],
         }
 
+        self.templates = policy_extractor.load_templates()
         self.import_data(DATA_FILE)
-        
+
         self.set_ui()
         self.set_signals()
 
@@ -142,18 +144,79 @@ class Receipt(QMainWindow):
                     ]
                     if pdf_paths:
                         extracted_text, status_msg, err_msg = extract_text_from_pdf(pdf_paths[-1])
-                        show_pdf_text_preview(
-                            self,
-                            pdf_paths[-1],
-                            extracted_text,
-                            status_msg,
-                            err_msg,
-                        )
+                        if not self._autofill_from_text(extracted_text, drop_group):
+                            show_pdf_text_preview(
+                                self,
+                                pdf_paths[-1],
+                                extracted_text,
+                                status_msg,
+                                err_msg,
+                            )
 
                     event.acceptProposedAction()
                     return True
 
         return super().eventFilter(watched, event)
+
+    def _autofill_from_text(self, text, zone):
+        """Fill the form from a matching template. Returns False if none matched."""
+        template = policy_extractor.detect(text, self.templates)
+        if not template or template.get("zone", "main") != zone:
+            return False
+
+        values = policy_extractor.extract(text, template)
+        missing = [field for field, value in values.items() if value is None]
+
+        if zone == "main":
+            self._select_combo(self.cmb_insurance_company, template.get("company"))
+            # selecting the company resets the type, so set the type afterwards
+            self._select_combo(self.cmb_insurance_type, template.get("insurance_type"))
+            policy_edit = self.lineedit_policy
+        else:
+            kind = template.get("extra_kind")
+            combo, policy_edit = {
+                "ra": (self.cmb_insurance_ra, self.lineedit_ra_policy),
+                "legal": (self.cmb_insurance_legal, self.lineedit_legal_policy),
+                "extra_covers": (
+                    self.cmb_insurance_extra_covers,
+                    self.lineedit_extra_covers_policy,
+                ),
+            }.get(kind, (None, None))
+            if combo is None:
+                return False
+            self._select_combo(combo, template.get("company"))
+
+        simple_fields = {
+            "policy": policy_edit,
+            "plate": self.lineedit_plate if zone == "main" else None,
+            "customer": self.lineedit_customer if zone == "main" else None,
+            "amount": self.lineedit_amount if zone == "main" else None,
+        }
+        for field, widget in simple_fields.items():
+            if widget is not None and values.get(field):
+                widget.setText(values[field])
+
+        if zone == "main" and (values.get("start") or values.get("end")):
+            self.radio_free.setChecked(True)  # keep the end date from the PDF
+            if values.get("start"):
+                self.date_start.setDate(QDate.fromString(values["start"], "dd/MM/yyyy"))
+            if values.get("end"):
+                self.date_end.setDate(QDate.fromString(values["end"], "dd/MM/yyyy"))
+
+        if missing:
+            self.statusbar.showMessage(
+                "Δεν βρέθηκαν: " + ", ".join(missing), 10000
+            )
+        return True
+
+    def _select_combo(self, combo, name):
+        if not name:
+            return
+        index = combo.findText(name, Qt.MatchFlag.MatchFixedString)  # case-insensitive
+        if index >= 0:
+            combo.setCurrentIndex(index)
+        else:
+            self.statusbar.showMessage(f"Δεν βρέθηκε στη λίστα: {name}", 10000)
 
     def _enable_drop_target(self, widget):
         widget.setAcceptDrops(True)

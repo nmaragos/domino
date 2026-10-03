@@ -1,0 +1,13 @@
+{
+  "insurer": "interamerican",
+  "company": "INTERAMERICAN",
+  "zone": "extra",
+  "extra_kind": "ra",
+  "detect": [
+    "ΑΣΦΑΛΙΣΤΗΡΙΟ ΟΔΙΚΗΣ ΒΟΗΘΕΙΑΣ",
+    "ΙΝΤΕΡΑΜΕΡΙΚΑΝ"
+  ],
+  "fields": {
+    "policy": "Αριθμός συμβολαίου:\\s+(\\d+)"
+  }
+}

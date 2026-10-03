@@ -1,0 +1,33 @@
+TASK: Build regex extraction templates for Greek insurance policy PDFs, one per insurer + policy layout.
+Run per insurer as a Haiku subagent (model: haiku). One insurer per agent.
+
+SETUP
+- samples/<insurer>/*.pdf   real policies, 1-5 per insurer (gitignored)
+- tools/dump.py <pdf|folder>   writes <pdf>.txt using the APP'S OWN extractor (PyMuPDF). Do not use pdfplumber.
+- tools/test.py <insurer>      runs templates over all samples; prints only failures + one summary line.
+- src/policy_extractor.py      runtime code (detect/extract/validate). Do not change it without asking.
+- src/record.json (cp1253 encoded) holds the dropdown names. "company" / "insurance_type" in a template
+  must equal a name in insurance_company / insurance_type (or insurance_ra / insurance_legal /
+  insurance_extra_covers for zone "extra").
+- extract_policy.py is only a rough reference for Atlantiki; its regexes were fitted to one PDF.
+
+TEMPLATE: templates/<insurer>_<layout>.json (UTF-8)
+{"insurer":"...","company":"<record.json name>","insurance_type":"<record.json name>",
+ "zone":"main|extra","extra_kind":"ra|legal|extra_covers  (zone extra only)",
+ "detect":["text unique to this insurer AND layout"],
+ "fields":{"<field>":"<regex with one capture group; several groups are joined with a space, e.g. surname + first name>"}}
+- Optional "name_order":"first_father_last" (or "first_last") if the insurer prints persons as FIRST FATHER SURNAME (customer list uses SURNAME FIRST).
+FIELDS (form fields only): policy, plate, start, end, amount, customer
+- start/end are dd/mm/yyyy, amount is total premium (Greek format 1.234,56).
+- Omit fields the document doesn't contain (plate for non-vehicle policies).
+- "zone":"extra" templates (RA / legal / extra covers) usually need only "policy".
+
+PER INSURER
+1. tools/dump.py samples/<insurer>; read ONE .txt, grep labels in the others. Never open PDFs.
+2. Write the template. Anchor on labels, not positions or line numbers. Text may merge two columns on one
+   line: use lazy matches bounded by the next label. Must work on ALL samples of the insurer.
+3. Run tools/test.py <insurer>. Fix only failing fields. Max 3 fix rounds, then list the field as unresolved.
+4. Several layouts (car vs home, etc.): one template per layout with distinct detect strings.
+5. Reply with one line: "<insurer>: N templates, unresolved: <fields or none>".
+
+FINAL (orchestrator): collect lines into report.md as a table: insurer | templates | unresolved fields.
