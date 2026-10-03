@@ -1,6 +1,6 @@
 # Template report
 
-Checked with `tools/test.py <insurer>` (all fields extracted, company/type names present in `record.json`)
+Checked with `tools/test.py <insurer>` (all fields extracted, company/type names present in the `record.json` the app loads, i.e. `DATA_FILE` in `receipt.py`; the repo copy `src/record.json` is stale)
 and by reading the extracted values against the PDF text.
 
 | insurer | templates | unresolved fields |
@@ -21,7 +21,7 @@ and by reading the extracted values against the PDF text.
 | generali | 1 (car) | none (`name_order: first_father_last`) |
 | gmi | 1 (car) | none (amount = 6th value under `Δίπλωμα <2 ετών`; equals net total + taxes in both samples) |
 | groupama | 1 (property) | none |
-| hd | 1 (motorcycle, company HELLAS DIRECT) | company: `HELLAS DIRECT` is not in `record.json` yet (add it; `test.py hd` reports it until then); `name_order: first_last` |
+| hd | 1 (motorcycle, company HELLAS DIRECT) | none (`name_order: first_last`) |
 | interamerican | 2 (car, road assistance zone extra) | none |
 
 Extractor behaviours that templates rely on (`src/policy_extractor.py`): dates accept dd/mm/yy and are

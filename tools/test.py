@@ -1,7 +1,9 @@
 """Run templates over samples/<insurer>/*.pdf (via cached .txt dumps). Prints only failures + a summary."""
+import ast
 import glob
 import json
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -9,6 +11,20 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import policy_extractor as pe  # noqa: E402
 from dump import dump  # noqa: E402
+
+
+def find_record_path():
+    """The record.json the app loads (DATA_FILE in receipt.py), else the repo copy."""
+    with open(os.path.join(ROOT, "src", "receipt.py"), encoding="utf-8") as f:
+        match = re.search(r'^DATA_FILE = os\.path\.join\((".*")\)', f.read(), re.M)
+    if match:
+        try:
+            path = ast.literal_eval(match.group(1))
+            if os.path.exists(path):
+                return path
+        except (ValueError, SyntaxError):
+            pass
+    return os.path.join(ROOT, "src", "record.json")
 
 
 def check_names(template, record):
@@ -33,7 +49,8 @@ def check_names(template, record):
 
 def main(insurer):
     templates = pe.load_templates()
-    with open(os.path.join(ROOT, "src", "record.json"), encoding="cp1253") as f:
+    record_path = find_record_path()
+    with open(record_path, encoding="cp1253") as f:
         record = json.load(f)
     name_problems = 0
     for t in templates:
