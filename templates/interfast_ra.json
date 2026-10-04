@@ -1,0 +1,14 @@
+{
+  "insurer": "interfast",
+  "company": "INTERFAST_ASSISTANCE",
+  "zone": "extra",
+  "extra_kind": "ra",
+  "detect": [
+    "INTERFAST",
+    "ΟΔΙΚΗ ΒΟΗΘΕΙΑ"
+  ],
+  "fields": {
+    "policy": "Αρ.Συμβολαίου:(?:[^\\n]*\\n){5}\\s*(\\d+)",
+    "amount": "Σύνολο:(?:[^\\n]*\\n){5}\\s*([0-9.,]+)"
+  }
+}

@@ -23,10 +23,19 @@ and by reading the extracted values against the PDF text.
 | groupama | 1 (property) | none |
 | hd | 1 (motorcycle, company HELLAS DIRECT) | none (`name_order: first_last`) |
 | interamerican | 2 (car, road assistance zone extra) | none |
+| interasco | 2 (car, health) | none (contract number only; health customer = policyholder `ΛΗΠΤΗΣ`, which is DOMINO GROUP IKE in sample 1; health dates are printed value-before-label) |
+| interfast | 1 (road assistance, zone extra, ra) | none |
+| interlife | 1 (car) | none (amount anchored on the line after the price column; fragile) |
+| intersalonika | 1 (car) | none |
+| mediterrania | 1 (legal, zone extra) | none (amount = first value after `Ολικά Ασφάλιστρα`; values print in reverse label order) |
+| mineta | 1 (car) | none (amount = 5 lines after `ΣΥΝΟΛΟ`; breaks if the premium columns change) |
+| syndea | 1 (car) | none (only one sample; amount = 6th figure after `ΣΥΝΟΛΟ`) |
+| triglav | 1 (car) | none |
+| ydrogios | 3 (car, boat, property) | none (boat/property customers are companies, printed as-is; dates in boat/property are printed value-before-label) |
 
 Extractor behaviours that templates rely on (`src/policy_extractor.py`): dates accept dd/mm/yy and are
 output as dd/mm/yyyy; plate Latin look-alike letters become Greek; spaces around `/` in policy numbers are
 removed; several capture groups in a field are joined with a space; optional template key `name_order`
 (`first_last`, `first_father_last`, `last_first_father`) rewrites person names to SURNAME FIRST (companies and initials untouched).
 
-No samples yet: interasco, interfast, interlife, intersalonika, mediterrania, mineta, orizon, syndea, triglav, ydrogios.
+No samples yet: orizon.
