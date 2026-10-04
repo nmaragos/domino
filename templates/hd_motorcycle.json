@@ -1,0 +1,20 @@
+{
+  "insurer": "hd",
+  "company": "HELLAS DIRECT",
+  "insurance_type": "ΑΥΤΟΚΙΝΗΤΟΥ",
+  "zone": "main",
+  "detect": [
+    "HD Insurance PLC",
+    "Blue Motorcycles",
+    "Μοτοσυκλέτα"
+  ],
+  "fields": {
+    "policy": "Αριθμός ασφαλιστηρίου\\s+([A-Z0-9-]+)",
+    "plate": "Αριθμός κυκλοφορίας\\s+([A-Z0-9]+)",
+    "start": "Έναρξη συμβολαίου\\s+(\\d{2}/\\d{2}/\\d{4})",
+    "end": "Λήξη συμβολαίου\\s+(\\d{2}/\\d{2}/\\d{4})",
+    "amount": "Συνολικό ασφάλιστρο\\s+€([\\d,]+)",
+    "customer": "Κάτοχος συμβολαίου[\\s\\S]*?Ονοματεπώνυμο\\s+([^\\n]+?)\\s*ΑΦΜ"
+  },
+  "name_order": "first_last"
+}

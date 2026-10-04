@@ -1,0 +1,16 @@
+{
+  "insurer": "mediterrania",
+  "company": "MEDITERRANIA",
+  "zone": "extra",
+  "extra_kind": "legal",
+  "detect": [
+    "Κλάδος Νομικής Προστασίας",
+    "mediterrania"
+  ],
+  "fields": {
+    "policy": "Πρακτορείο:\\s*\\n\\s*\\d+\\s*\\n(\\d+)",
+    "start": "Έναρξη Συμβολαίου\\s+\\nΛήξη[\\s\\S]*?\\n(\\d{2}/\\d{2}/\\d{4})",
+    "end": "Λήξη Συμβολαίου\\s+\\n[\\s\\S]*?\\n(\\d{2}/\\d{2}/\\d{4})",
+    "amount": "Ολικά Ασφάλιστρα\\s*:\\s*\\n\\s*(\\d+,\\d{2})"
+  }
+}

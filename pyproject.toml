@@ -1,0 +1,15 @@
+[project]
+name = "domino"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "docx-mailmerge==0.5.0",
+    "lxml==6.1.1",
+    "pymupdf==1.26.1",
+    "pyqt6==6.11",
+    "pyqt6-qt6==6.11.1",
+    "pyqt6-sip==13.11.1",
+    "pywin32==311",
+]
