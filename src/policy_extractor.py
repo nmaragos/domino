@@ -1,10 +1,12 @@
 import json
 import os
 import re
+import sys
 from datetime import datetime
 
 TEMPLATES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    getattr(sys, "_MEIPASS", None)
+    or os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "templates",
 )
 _LATIN_TO_GREEK = str.maketrans("ABEZHIKMNOPTYX", "ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ")

@@ -1,9 +1,16 @@
 import os
+import sys
 
 try:
     import fitz  # PyMuPDF
 except ImportError:
     fitz = None
+
+def resource_path(*parts):
+    """Path to a bundled file: the PyInstaller bundle when frozen, else src/."""
+    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, *parts)
+
 
 from PyQt6.QtCore import QLocale, QPoint, QRectF, QSize, Qt
 from PyQt6.QtGui import (
@@ -300,7 +307,7 @@ class Calculator(QDialog):
         super().__init__(parent)
 
         self.parent = parent
-        ui_file = os.path.join(os.path.dirname(__file__), "calculator.ui")
+        ui_file = resource_path("calculator.ui")
         uic.loadUi(ui_file, self)
 
         self.set_ui()
