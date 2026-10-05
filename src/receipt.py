@@ -8,7 +8,7 @@ import sys
 
 from mailmerge import MailMerge
 from PyQt6 import uic
-from PyQt6.QtCore import QCoreApplication, QDate, QEvent, Qt, QLocale, QSettings
+from PyQt6.QtCore import QCoreApplication, QDate, QEvent, Qt, QSettings
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import *
 from win32com import client
@@ -67,8 +67,8 @@ class Receipt(QMainWindow):
             "main": [],
             "extra": [],
         }
-        self.amounts = {}  # kind ("main", "ra", "legal", "extra_covers") -> amount
-        self.used_files = {}  # kind -> PDF name the policy was read from
+        self.amounts = {}
+        self.used_files = {}
 
         self.templates = policy_extractor.load_templates()
         self.import_data(DATA_FILE)
@@ -308,7 +308,6 @@ class Receipt(QMainWindow):
             if widget is not None and values.get(field):
                 widget.setText(values[field])
 
-        # each policy keeps its own amount; the form shows the sum of all of them
         self.amounts.pop(kind, None)
         if values.get("amount"):
             self.amounts[kind] = self._parse_amount(values["amount"])
@@ -407,7 +406,8 @@ class Receipt(QMainWindow):
             cmb.clear()
 
         for chk in self.findChildren(QCheckBox):
-            chk.setChecked(False)
+            if chk is not self.theme_switch:
+                chk.setChecked(False)
 
         for dates in self.findChildren(QDateEdit):
             dates.clear()
@@ -531,7 +531,6 @@ class Receipt(QMainWindow):
             split_policy_text = policy_text.rsplit(",", 1)
             policy_text = split_policy_text[0] + split_policy_text[1]
 
-        # create template dict
         self.doc_entries = {
             "amount": self.lineedit_amount.text(),
             "branch": self.cmb_insurance_type.currentText(),
@@ -545,7 +544,6 @@ class Receipt(QMainWindow):
             "start": self.date_start.date().toString("dd/MM/yyyy"),
         }
 
-        # create output files from templates
         if not receipt_only:
             doc_path = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
