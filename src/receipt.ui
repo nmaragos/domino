@@ -811,7 +811,7 @@
   </action>
   <action name="actionOCR_Templates">
    <property name="text">
-    <string>OCR Templates</string>
+    <string>Διαδρομή φακέλου templates</string>
    </property>
   </action>
   <action name="action_json">

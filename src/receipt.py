@@ -38,7 +38,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.0.1"
+VERSION = "2.1.0"
 
 
 class Receipt(QMainWindow):
@@ -64,8 +64,17 @@ class Receipt(QMainWindow):
         self.amounts = {}
         self.used_files = {}
 
-        self.templates = policy_extractor.load_templates()
-        self.import_data(DATA_FILE)
+        self.data_file = str(self.settings.value("data_file", DATA_FILE))
+        self.templates_dir = str(
+            self.settings.value("templates_dir", policy_extractor.TEMPLATES_DIR)
+        )
+        if not os.path.isdir(self.templates_dir):
+            self.templates_dir = policy_extractor.TEMPLATES_DIR
+        self.templates = policy_extractor.load_templates(self.templates_dir)
+        if not self.import_data(self.data_file, quiet=self.data_file != DATA_FILE):
+            if self.data_file != DATA_FILE:
+                self.data_file = DATA_FILE
+                self.import_data(self.data_file)
 
         self.set_theme_switch()
         self.set_ui()
@@ -110,20 +119,14 @@ class Receipt(QMainWindow):
     def set_ui(self):
         self.action_tray1.setChecked(False)
         self.lbl_date.setText(QDate.currentDate().toString("dd/MM/yyyy"))
-        self.lbl_receipt_number.setText(str(self.receipt_number))
         self.lineedit_amount.installEventFilter(self)
         self._enable_drop_target(self.groupBox)
         self._enable_drop_target(self.groupBox_3)
         # self.lineedit_amount.setValidator(double_validator())
-        self.lineedit_customer.setCompleter(QCompleter(self.customers))
         self.lineedit_customer.setFocus()
         self.lineedit_legal_policy.setEnabled(False)
         self.lineedit_ra_policy.setEnabled(False)
-        self.cmb_insurance_company.addItems(self.insurance_companies)
-        self.cmb_insurance_type.addItems(self.insurance_types)
-        self.cmb_insurance_ra.addItems(self.insurance_ra)
-        self.cmb_insurance_legal.addItems(self.insurance_legal)
-        self.cmb_insurance_extra_covers.addItems(self.insurance_extra_covers)
+        self.populate_from_data()
         self.radio6.setChecked(True)
         self.date_start.setDate(QDate.currentDate())
         self.date_end.setDate(QDate.currentDate().addMonths(6))
@@ -134,6 +137,8 @@ class Receipt(QMainWindow):
     def set_signals(self):
         self.action_quick_receipt.triggered.connect(self.print_receipt)
         self.action_version.triggered.connect(self.about)
+        self.action_json.triggered.connect(self.choose_data_file)
+        self.actionOCR_Templates.triggered.connect(self.choose_templates_dir)
         self.cmb_insurance_company.currentTextChanged.connect(self.check_insurance)
         self.cmb_insurance_extra_covers.currentIndexChanged.connect(self.check_extra_covers)
         self.cmb_insurance_legal.currentIndexChanged.connect(self.check_legal)
@@ -421,49 +426,89 @@ class Receipt(QMainWindow):
         )
         self.lineedit_amount.setText(formatted_number)
 
-    def import_data(self, json_file):
+    def import_data(self, json_file, quiet=False):
+        """Load json_file; on failure keep current data and return False."""
         try:
             with open(json_file) as file_to_read:
-                self.json_data = json.load(file_to_read)
-        except OSError as e:
+                data = json.load(file_to_read)
+            receipt_number = int(data["id"]) + 1
+            names = {
+                key: [item["name"] for item in data[key]]
+                for key in (
+                    "customer",
+                    "insurance_company",
+                    "insurance_ra",
+                    "insurance_legal",
+                    "insurance_extra_covers",
+                    "insurance_type",
+                )
+            }
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            if not quiet:
+                show_message(
+                    f"Unable to open data file. \n{e!r}",
+                    msg_title="Error",
+                    msg_type="Critical",
+                )
+            return False
+
+        self.json_data = data
+        self.receipt_number = receipt_number
+        self.customers = sorted(names["customer"])
+        self.insurance_companies = sorted(names["insurance_company"])
+        self.insurance_ra = sorted(names["insurance_ra"])
+        self.insurance_legal = sorted(names["insurance_legal"])
+        self.insurance_extra_covers = sorted(names["insurance_extra_covers"])
+        self.insurance_types = names["insurance_type"]
+        return True
+
+    def populate_from_data(self):
+        self.lbl_receipt_number.setText(str(self.receipt_number))
+        self.lineedit_customer.setCompleter(QCompleter(self.customers))
+        for cmb, items in (
+            (self.cmb_insurance_company, self.insurance_companies),
+            (self.cmb_insurance_type, self.insurance_types),
+            (self.cmb_insurance_ra, self.insurance_ra),
+            (self.cmb_insurance_legal, self.insurance_legal),
+            (self.cmb_insurance_extra_covers, self.insurance_extra_covers),
+        ):
+            cmb.blockSignals(True)
+            cmb.clear()
+            cmb.addItems(items)
+            cmb.setCurrentIndex(-1)
+            cmb.blockSignals(False)
+
+    def choose_data_file(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Διαδρομή αρχείου json",
+            self.data_file,
+            "JSON (*.json);;Όλα τα αρχεία (*)",
+        )
+        if not path:
+            return
+        if not self.import_data(path):
+            return
+        self.data_file = path
+        self.settings.setValue("data_file", path)
+        self.populate_from_data()
+
+    def choose_templates_dir(self):
+        path = QFileDialog.getExistingDirectory(
+            self, "Διαδρομή φακέλου templates", self.templates_dir
+        )
+        if not path:
+            return
+        templates = policy_extractor.load_templates(path)
+        if not templates:
             show_message(
-                f"Unable to open data file. \n{e}",
-                msg_title="Error",
-                msg_type="Critical",
+                "Δεν βρέθηκαν templates (*.json) στον φάκελο.",
+                msg_type="Warning",
             )
             return
-
-        self.receipt_number = int(self.json_data["id"]) + 1
-
-        customers = []
-        for customer in self.json_data["customer"]:
-            customers.append(customer["name"])
-        self.customers = sorted(customers)
-
-        insurance_companies = []
-        for company in self.json_data["insurance_company"]:
-            insurance_companies.append(company["name"])
-        self.insurance_companies = sorted(insurance_companies)
-
-        insurance_ra = []
-        for company in self.json_data["insurance_ra"]:
-            insurance_ra.append(company["name"])
-        self.insurance_ra = sorted(insurance_ra)
-
-        insurance_legal = []
-        for company in self.json_data["insurance_legal"]:
-            insurance_legal.append(company["name"])
-        self.insurance_legal = sorted(insurance_legal)
-
-        insurance_extra_covers = []
-        for company in self.json_data["insurance_extra_covers"]:
-            insurance_extra_covers.append(company["name"])
-        self.insurance_extra_covers = sorted(insurance_extra_covers)
-
-        insurance_types = []
-        for ins_type in self.json_data["insurance_type"]:
-            insurance_types.append(ins_type["name"])
-        self.insurance_types = insurance_types
+        self.templates_dir = path
+        self.templates = templates
+        self.settings.setValue("templates_dir", path)
 
     def update_customer_list(self):
         customer_name = self.lineedit_customer.text()
@@ -593,7 +638,7 @@ class Receipt(QMainWindow):
 
     def update_data_file(self):
         try:
-            with open(DATA_FILE, "w") as file_to_write:
+            with open(self.data_file, "w") as file_to_write:
                 json.dump(
                     self.json_data,
                     file_to_write,
