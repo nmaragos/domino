@@ -4,6 +4,7 @@ import os
 # import pyi_splash
 import subprocess
 import sys
+import tempfile
 
 
 from mailmerge import MailMerge
@@ -21,22 +22,15 @@ from helpers import (
     ThemeSwitch,
     apply_theme,
     extract_text_from_pdf,
+    resource_path,
     show_message,
     windows_is_dark,
 )
 
-UI_FILE = os.path.join(os.path.dirname(__file__), "receipt.ui")
+UI_FILE = resource_path("receipt.ui")
 DATA_FILE = os.path.join("//DOM-SRV-01/DominoInsurance/software/record.json")
-TEMPLATE_EISPRAXI = os.path.join(
-    os.path.dirname(__file__),
-    "resource",
-    "eispraxi_template.docx"
-)
-TEMPLATE_PARALABI = os.path.join(
-    os.path.dirname(__file__),
-    "resource",
-    "paralabi_template.docx"
-)
+TEMPLATE_EISPRAXI = resource_path("resource", "eispraxi_template.docx")
+TEMPLATE_PARALABI = resource_path("resource", "paralabi_template.docx")
 RADIO_GRP_MAPPING = {
     -2: 1,
     -3: 3,
@@ -44,7 +38,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 
 class Receipt(QMainWindow):
@@ -545,10 +539,7 @@ class Receipt(QMainWindow):
         }
 
         if not receipt_only:
-            doc_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)),
-                "print_paralabi.docx"
-            )
+            doc_path = os.path.join(tempfile.gettempdir(), "print_paralabi.docx")
             with MailMerge(TEMPLATE_PARALABI) as document:
                 document.merge(**self.doc_entries)
                 document.write(doc_path)
@@ -588,10 +579,7 @@ class Receipt(QMainWindow):
                 self.doc_entries["description"] = "συμβόλαιο κλάδου " + \
                     self.cmb_insurance_type.currentText()
 
-            doc_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)),
-                "print_eispraxi.docx"
-            )
+            doc_path = os.path.join(tempfile.gettempdir(), "print_eispraxi.docx")
 
             with MailMerge(
                 TEMPLATE_EISPRAXI,
