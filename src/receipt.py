@@ -9,12 +9,13 @@ import tempfile
 from mailmerge import MailMerge
 from PyQt6 import uic
 from PyQt6.QtCore import QCoreApplication, QDate, QEvent, Qt, QSettings
-from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtGui import QGuiApplication, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import *
 from win32com import client
 import win32print
 
 import datafile
+import names
 import policy_extractor
 from helpers import (
     Calculator,
@@ -38,7 +39,20 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.1.0"
+VERSION = "2.2.0"
+
+
+CUSTOMER_KEY_ROLE = Qt.ItemDataRole.UserRole + 1
+
+
+class CustomerCompleter(QCompleter):
+    """Matches typed text against name keys, but inserts the real name."""
+
+    def splitPath(self, path):
+        return [names.name_key(path)]
+
+    def pathFromIndex(self, index):
+        return index.data(Qt.ItemDataRole.DisplayRole)
 
 
 class Receipt(QMainWindow):
@@ -53,6 +67,7 @@ class Receipt(QMainWindow):
         self.insurance_extra_covers = []
         self.insurance_types = []
         self.customers = []
+        self.customer_index = {}
         self.json_data = None
         self.data_encoding = datafile.LEGACY_ENCODING
         self.doc_entries = []
@@ -306,7 +321,10 @@ class Receipt(QMainWindow):
         }
         for field, widget in simple_fields.items():
             if widget is not None and values.get(field):
-                widget.setText(values[field])
+                text = values[field]
+                if field == "customer":
+                    text = names.find_name(self.customer_index, text) or text
+                widget.setText(text)
 
         self.amounts.pop(kind, None)
         if values.get("amount"):
@@ -432,7 +450,7 @@ class Receipt(QMainWindow):
         try:
             data, encoding = datafile.read_data(json_file)
             receipt_number = int(data["id"]) + 1
-            names = {
+            lists = {
                 key: [item["name"] for item in data[key]]
                 for key in (
                     "customer",
@@ -455,17 +473,17 @@ class Receipt(QMainWindow):
         self.json_data = data
         self.data_encoding = encoding
         self.receipt_number = receipt_number
-        self.customers = sorted(names["customer"])
-        self.insurance_companies = sorted(names["insurance_company"])
-        self.insurance_ra = sorted(names["insurance_ra"])
-        self.insurance_legal = sorted(names["insurance_legal"])
-        self.insurance_extra_covers = sorted(names["insurance_extra_covers"])
-        self.insurance_types = names["insurance_type"]
+        self.customers = sorted(lists["customer"])
+        self.insurance_companies = sorted(lists["insurance_company"])
+        self.insurance_ra = sorted(lists["insurance_ra"])
+        self.insurance_legal = sorted(lists["insurance_legal"])
+        self.insurance_extra_covers = sorted(lists["insurance_extra_covers"])
+        self.insurance_types = lists["insurance_type"]
         return True
 
     def populate_from_data(self):
         self.lbl_receipt_number.setText(str(self.receipt_number))
-        self.lineedit_customer.setCompleter(QCompleter(self.customers))
+        self._refresh_customers()
         for cmb, items in (
             (self.cmb_insurance_company, self.insurance_companies),
             (self.cmb_insurance_type, self.insurance_types),
@@ -511,16 +529,34 @@ class Receipt(QMainWindow):
         self.templates = templates
         self.settings.setValue("templates_dir", path)
 
+    def _refresh_customers(self):
+        """Rebuild the match index and the accent/case-insensitive completer."""
+        self.customer_index = names.build_index(self.customers)
+        model = QStandardItemModel(self)
+        for name in self.customers:
+            item = QStandardItem(name)
+            item.setData(names.name_key(name), CUSTOMER_KEY_ROLE)
+            model.appendRow(item)
+        completer = CustomerCompleter(model, self)
+        completer.setCompletionRole(CUSTOMER_KEY_ROLE)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.lineedit_customer.setCompleter(completer)
+
     def update_customer_list(self):
-        customer_name = self.lineedit_customer.text()
+        customer_name = self.lineedit_customer.text().strip()
+        canonical = names.find_name(self.customer_index, customer_name)
+        if canonical:
+            if canonical != self.lineedit_customer.text():
+                self.lineedit_customer.setText(canonical)
+            return
         if customer_name and customer_name not in self.customers:
             ans = show_message(
                 f"Ο Πελάτης {customer_name} δεν βρέθηκε στη λίστα... \nΝα γίνει νέα εγγραφή;",
                 msg_type="Question"
-            ) 
+            )
             if ans == QMessageBox.StandardButton.Yes:
                 self.customers.append(customer_name)
-                self.lineedit_customer.setCompleter(QCompleter(self.customers))
+                self._refresh_customers()
 
                 new_customer = {"name": customer_name}
                 self.json_data["customer"].append(new_customer)
@@ -651,6 +687,7 @@ class Receipt(QMainWindow):
             return False
         self.json_data = merged
         self.customers = sorted(c["name"] for c in merged["customer"])
+        self._refresh_customers()
         self.receipt_number = max(self.receipt_number, int(merged["id"]) + 1)
         return True
 
