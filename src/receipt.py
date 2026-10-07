@@ -1,4 +1,3 @@
-import json
 import locale
 import os
 # import pyi_splash
@@ -15,6 +14,7 @@ from PyQt6.QtWidgets import *
 from win32com import client
 import win32print
 
+import datafile
 import policy_extractor
 from helpers import (
     Calculator,
@@ -38,7 +38,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 
 
 class Receipt(QMainWindow):
@@ -54,6 +54,7 @@ class Receipt(QMainWindow):
         self.insurance_types = []
         self.customers = []
         self.json_data = None
+        self.data_encoding = datafile.LEGACY_ENCODING
         self.doc_entries = []
 
         self.settings = QSettings("DOMINO", "Receipt")
@@ -429,8 +430,7 @@ class Receipt(QMainWindow):
     def import_data(self, json_file, quiet=False):
         """Load json_file; on failure keep current data and return False."""
         try:
-            with open(json_file) as file_to_read:
-                data = json.load(file_to_read)
+            data, encoding = datafile.read_data(json_file)
             receipt_number = int(data["id"]) + 1
             names = {
                 key: [item["name"] for item in data[key]]
@@ -453,6 +453,7 @@ class Receipt(QMainWindow):
             return False
 
         self.json_data = data
+        self.data_encoding = encoding
         self.receipt_number = receipt_number
         self.customers = sorted(names["customer"])
         self.insurance_companies = sorted(names["insurance_company"])
@@ -637,24 +638,26 @@ class Receipt(QMainWindow):
         return print_docs
 
     def update_data_file(self):
+        """Merge-save to disk; return True on success."""
         try:
-            with open(self.data_file, "w") as file_to_write:
-                json.dump(
-                    self.json_data,
-                    file_to_write,
-                    ensure_ascii=False,
-                    indent=4
-                )
-        except OSError as e:
+            merged = datafile.save_merged(
+                self.data_file, self.json_data, self.data_encoding
+            )
+        except (OSError, ValueError, KeyError, TypeError) as e:
             show_message(
                 f"Unable to update data file. \n{e}",
                 msg_type="Warning"
             )
+            return False
+        self.json_data = merged
+        self.customers = sorted(c["name"] for c in merged["customer"])
+        self.receipt_number = max(self.receipt_number, int(merged["id"]) + 1)
+        return True
 
     def update_receipt_number(self):
         self.json_data["id"] = self.receipt_number
-        self.update_data_file()
-        self.receipt_number += 1
+        if not self.update_data_file():
+            return
         self.lbl_receipt_number.setText(str(self.receipt_number))
 
     def print_quick_receipt(self):
