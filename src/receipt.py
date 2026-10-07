@@ -38,7 +38,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 
 
 class Receipt(QMainWindow):
