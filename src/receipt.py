@@ -29,7 +29,8 @@ from helpers import (
 )
 
 UI_FILE = resource_path("receipt.ui")
-DATA_FILE = os.path.join("//DOM-SRV-01/DominoInsurance/software/record.json")
+DATA_FILE = "\\\\DOM-SRV-01\\DominoInsurance\\software\record.json"
+ARCHIVE_ROOT = "\\\\DOM-SRV-01\\DominoInsurance\\Αρχείο"
 TEMPLATE_EISPRAXI = resource_path("resource", "eispraxi_template.docx")
 TEMPLATE_PARALABI = resource_path("resource", "paralabi_template.docx")
 RADIO_GRP_MAPPING = {
@@ -86,6 +87,9 @@ class Receipt(QMainWindow):
         )
         if not os.path.isdir(self.templates_dir):
             self.templates_dir = policy_extractor.TEMPLATES_DIR
+        self.archive_root = str(
+            self.settings.value("archive_root", ARCHIVE_ROOT)
+        )
         self.templates = policy_extractor.load_templates(self.templates_dir)
         if not self.import_data(self.data_file, quiet=self.data_file != DATA_FILE):
             if self.data_file != DATA_FILE:
@@ -155,6 +159,7 @@ class Receipt(QMainWindow):
         self.action_version.triggered.connect(self.about)
         self.action_json.triggered.connect(self.choose_data_file)
         self.actionOCR_Templates.triggered.connect(self.choose_templates_dir)
+        self.action_archive_root.triggered.connect(self.choose_archive_root)
         self.cmb_insurance_company.currentTextChanged.connect(self.check_insurance)
         self.cmb_insurance_extra_covers.currentIndexChanged.connect(self.check_extra_covers)
         self.cmb_insurance_legal.currentIndexChanged.connect(self.check_legal)
@@ -529,6 +534,15 @@ class Receipt(QMainWindow):
         self.templates = templates
         self.settings.setValue("templates_dir", path)
 
+    def choose_archive_root(self):
+        path = QFileDialog.getExistingDirectory(
+            self, "Διαδρομή φακέλου αποθήκευσης αρχείων", self.archive_root
+        )
+        if not path:
+            return
+        self.archive_root = os.path.normpath(path)
+        self.settings.setValue("archive_root", self.archive_root)
+
     def _refresh_customers(self):
         """Rebuild the match index and the accent/case-insensitive completer."""
         self.customer_index = names.build_index(self.customers)
@@ -807,7 +821,7 @@ class Receipt(QMainWindow):
         print_docs = self.prepare_printing()
 
         pdf_dir = os.path.join(
-            "\\\\DOM-SRV-01\\DominoInsurance\\Αρχείο",
+            self.archive_root,
             self.doc_entries["customer"],
             "receipts",
         )

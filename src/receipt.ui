@@ -281,7 +281,7 @@
      </property>
      <property name="minimumDateTime">
       <datetime>
-       <hour>20</hour>
+       <hour>18</hour>
        <minute>0</minute>
        <second>0</second>
        <year>2022</year>
@@ -749,12 +749,6 @@
     <addaction name="separator"/>
     <addaction name="action_quick_receipt"/>
    </widget>
-   <widget class="QMenu" name="menu_view">
-    <property name="title">
-     <string>Εμφάνιση</string>
-    </property>
-    <addaction name="action_follow_windows"/>
-   </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
      <string>About</string>
@@ -765,12 +759,20 @@
     <property name="title">
      <string>Ρυθμίσεις</string>
     </property>
+    <widget class="QMenu" name="menu_view">
+     <property name="title">
+      <string>Εμφάνιση</string>
+     </property>
+     <addaction name="action_follow_windows"/>
+    </widget>
     <addaction name="action_json"/>
     <addaction name="actionOCR_Templates"/>
+    <addaction name="action_archive_root"/>
+    <addaction name="separator"/>
+    <addaction name="menu_view"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
-   <addaction name="menu_view"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -787,7 +789,7 @@
   </action>
   <action name="action_quick_receipt">
    <property name="text">
-    <string>Εκτύπωση Εγγράφων</string>
+    <string>Απόδειξης Παραλαβής</string>
    </property>
    <property name="toolTip">
     <string>Εκτύπωση απόδειξης παραλαβής και είσπραξης</string>
@@ -817,6 +819,11 @@
   <action name="action_json">
    <property name="text">
     <string>Διαδρομή αρχείου json</string>
+   </property>
+  </action>
+  <action name="action_archive_root">
+   <property name="text">
+    <string>Διαδρομή φακέλου αποθήκευσης αρχείων</string>
    </property>
   </action>
  </widget>
