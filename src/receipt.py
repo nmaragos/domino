@@ -796,7 +796,7 @@ class Receipt(QMainWindow):
             msg_type="no_buttons"
         )
 
-        def _open_pdf_file(pdf_filepath):
+        def _save_pdf_file(pdf_filepath):
             try:
                 word = client.Dispatch("Word.Application")
                 doc = word.Documents.Open(print_docs[0])
@@ -813,10 +813,16 @@ class Receipt(QMainWindow):
                 word.Quit()
                 return
 
-            subprocess.Popen(
-                [pdf_filepath],
-                shell=True
+            msg_reply = show_message(
+                f"Το αρχείο PDF αποθηκεύτηκε:\n{pdf_filepath}\n\n"
+                "Θέλετε να ανοίξει;",
+                msg_type="Question"
             )
+            if msg_reply == QMessageBox.StandardButton.Yes:
+                subprocess.Popen(
+                    [pdf_filepath],
+                    shell=True
+                )
 
         print_docs = self.prepare_printing()
 
@@ -855,13 +861,13 @@ class Receipt(QMainWindow):
                         msg_details=f"{e}"
                     )
                     return
-                _open_pdf_file(pdf_filepath)
+                _save_pdf_file(pdf_filepath)
             elif msg_reply == QMessageBox.StandardButton.No:
                 doc_path = print_docs[0].rsplit(".", 1)
                 pdf_tmp_filepath = doc_path[0] + ".pdf"
-                _open_pdf_file(pdf_tmp_filepath)
+                _save_pdf_file(pdf_tmp_filepath)
         else:
-            _open_pdf_file(pdf_filepath)
+            _save_pdf_file(pdf_filepath)
 
         if self.chk_money_receipt.isChecked():
             self.print_document(
