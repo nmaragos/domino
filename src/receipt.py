@@ -155,7 +155,8 @@ class Receipt(QMainWindow):
             cmb.setCurrentIndex(-1)
 
     def set_signals(self):
-        self.action_quick_receipt.triggered.connect(self.print_receipt)
+        self.action_print_doc_receipt.triggered.connect(self.print_doc_receipt)
+        self.action_print_money_receipt.triggered.connect(self.print_money_receipt)
         self.action_version.triggered.connect(self.about)
         self.action_json.triggered.connect(self.choose_data_file)
         self.actionOCR_Templates.triggered.connect(self.choose_templates_dir)
@@ -170,9 +171,9 @@ class Receipt(QMainWindow):
         self.button_grp_length.buttonClicked.connect(self.calculate_end_date)
         self.date_start.editingFinished.connect(self.calculate_end_date)
         self.btn_reset.clicked.connect(self.clear_ui)
-        self.btn_e_sign.clicked.connect(self.e_sign)
+        self.btn_create_documents.clicked.connect(self.create_documents)
         self.btn_exit.clicked.connect(QCoreApplication.instance().quit)
-        self.btn_print.clicked.connect(self.print_quick_receipt)
+        self.btn_print.clicked.connect(self.print_money_receipt)
         self.theme_switch.toggled.connect(self.toggle_theme)
         self.action_follow_windows.toggled.connect(self.toggle_follow_windows)
         QGuiApplication.styleHints().colorSchemeChanged.connect(
@@ -585,7 +586,8 @@ class Receipt(QMainWindow):
             )
         )
 
-    def prepare_printing(self, receipt_only=False):
+    def prepare_printing(self, paralabi=True, eispraxi=False):
+        """Build the requested documents; returned in order PARALABI, EISPRAXI."""
         print_docs = []
 
         company_text = self.cmb_insurance_company.currentText()
@@ -634,7 +636,7 @@ class Receipt(QMainWindow):
             "start": self.date_start.date().toString("dd/MM/yyyy"),
         }
 
-        if not receipt_only:
+        if paralabi:
             doc_path = os.path.join(tempfile.gettempdir(), "print_paralabi.docx")
             with MailMerge(TEMPLATE_PARALABI) as document:
                 document.merge(**self.doc_entries)
@@ -647,7 +649,7 @@ class Receipt(QMainWindow):
             #     )
             # )
 
-        if self.chk_money_receipt.isChecked() or receipt_only:
+        if eispraxi:
             if self.lineedit_ra_policy.text() or \
               self.lineedit_legal_policy.text() or \
                 self.lineedit_extra_covers_policy.text():
@@ -711,8 +713,9 @@ class Receipt(QMainWindow):
             return
         self.lbl_receipt_number.setText(str(self.receipt_number))
 
-    def print_quick_receipt(self):
-        print_docs = self.prepare_printing(receipt_only=True)
+    def print_money_receipt(self):
+        """Print only the EISPRAXI document, regardless of the checkbox."""
+        print_docs = self.prepare_printing(paralabi=False, eispraxi=True)
         self.print_document(
             print_docs[0],
             tray_number=260,
@@ -720,23 +723,15 @@ class Receipt(QMainWindow):
         )
         self.update_receipt_number()
 
-    def print_receipt(self):
-        # self.update_receipt_number()
-        print_docs = self.prepare_printing()
+    def print_doc_receipt(self):
+        """Print only the PARALABI document, regardless of the checkbox."""
+        print_docs = self.prepare_printing(paralabi=True, eispraxi=False)
 
         print_tray = 259
         if self.action_tray1.isChecked():
             print_tray = 260
 
         self.print_document(print_docs[0], print_tray, black_ink_only=True)
-
-        if self.chk_money_receipt.isChecked():
-            self.print_document(
-                print_docs[1],
-                tray_number=260,
-                black_ink_only=True
-            )
-            self.update_receipt_number()
 
     def print_document(self, document, tray_number, black_ink_only):
         info_w = show_message(
@@ -789,7 +784,7 @@ class Receipt(QMainWindow):
 
         info_w.accept()
 
-    def e_sign(self):
+    def create_documents(self):
 
         info_w = show_message(
             msg_text="Προετοιμασία εγγράφων...",
@@ -824,7 +819,8 @@ class Receipt(QMainWindow):
                     shell=True
                 )
 
-        print_docs = self.prepare_printing()
+        money_receipt = self.chk_money_receipt.isChecked()
+        print_docs = self.prepare_printing(paralabi=True, eispraxi=money_receipt)
 
         pdf_dir = os.path.join(
             self.archive_root,
@@ -869,7 +865,7 @@ class Receipt(QMainWindow):
         else:
             _save_pdf_file(pdf_filepath)
 
-        if self.chk_money_receipt.isChecked():
+        if money_receipt:
             self.print_document(
                 print_docs[1],
                 tray_number=260,

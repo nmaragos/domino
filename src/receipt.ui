@@ -281,7 +281,7 @@
      </property>
      <property name="minimumDateTime">
       <datetime>
-       <hour>18</hour>
+       <hour>14</hour>
        <minute>0</minute>
        <second>0</second>
        <year>2022</year>
@@ -498,6 +498,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="btn_print">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>425</x>
@@ -540,9 +543,9 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>80</x>
+      <x>50</x>
       <y>500</y>
-      <width>283</width>
+      <width>341</width>
       <height>24</height>
      </rect>
     </property>
@@ -550,7 +553,7 @@
      <item>
       <widget class="QCheckBox" name="chk_money_receipt">
        <property name="text">
-        <string>Απόδειξη είσπραξης</string>
+        <string>Εκτύπωση απόδ. είσπραξης</string>
        </property>
       </widget>
      </item>
@@ -592,7 +595,7 @@
      </item>
     </layout>
    </widget>
-   <widget class="QPushButton" name="btn_e_sign">
+   <widget class="QPushButton" name="btn_create_documents">
     <property name="geometry">
      <rect>
       <x>425</x>
@@ -602,7 +605,8 @@
      </rect>
     </property>
     <property name="text">
-     <string>e-sign</string>
+     <string>Δημιουργία
+Εγγράφων</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_17">
@@ -747,7 +751,8 @@
     </property>
     <addaction name="action_tray1"/>
     <addaction name="separator"/>
-    <addaction name="action_quick_receipt"/>
+    <addaction name="action_print_money_receipt"/>
+    <addaction name="action_print_doc_receipt"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -787,12 +792,12 @@
     <string>Χρήση μόνο του Tray 1</string>
    </property>
   </action>
-  <action name="action_quick_receipt">
+  <action name="action_print_doc_receipt">
    <property name="text">
     <string>Απόδειξης Παραλαβής</string>
    </property>
    <property name="toolTip">
-    <string>Εκτύπωση απόδειξης παραλαβής και είσπραξης</string>
+    <string>Εκτύπωση απόδειξης παραλαβής</string>
    </property>
   </action>
   <action name="action_follow_windows">
@@ -826,6 +831,14 @@
     <string>Διαδρομή φακέλου αποθήκευσης αρχείων</string>
    </property>
   </action>
+  <action name="action_print_money_receipt">
+   <property name="text">
+    <string>Απόδειξης Είσπραξης</string>
+   </property>
+   <property name="toolTip">
+    <string>Εκτύπωση Απόδειξης Είσπραξης</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>lineedit_customer</tabstop>
@@ -849,7 +862,7 @@
   <tabstop>chk_money_receipt</tabstop>
   <tabstop>lineedit_amount</tabstop>
   <tabstop>btn_print</tabstop>
-  <tabstop>btn_e_sign</tabstop>
+  <tabstop>btn_create_documents</tabstop>
   <tabstop>btn_reset</tabstop>
   <tabstop>btn_exit</tabstop>
  </tabstops>
