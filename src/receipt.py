@@ -29,7 +29,8 @@ from helpers import (
 )
 
 UI_FILE = resource_path("receipt.ui")
-DATA_FILE = os.path.join("//DOM-SRV-01/DominoInsurance/software/record.json")
+DATA_FILE = "\\\\DOM-SRV-01\\DominoInsurance\\software\record.json"
+ARCHIVE_ROOT = "\\\\DOM-SRV-01\\DominoInsurance\\Αρχείο"
 TEMPLATE_EISPRAXI = resource_path("resource", "eispraxi_template.docx")
 TEMPLATE_PARALABI = resource_path("resource", "paralabi_template.docx")
 RADIO_GRP_MAPPING = {
@@ -39,7 +40,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 
 
 CUSTOMER_KEY_ROLE = Qt.ItemDataRole.UserRole + 1
@@ -86,6 +87,9 @@ class Receipt(QMainWindow):
         )
         if not os.path.isdir(self.templates_dir):
             self.templates_dir = policy_extractor.TEMPLATES_DIR
+        self.archive_root = str(
+            self.settings.value("archive_root", ARCHIVE_ROOT)
+        )
         self.templates = policy_extractor.load_templates(self.templates_dir)
         if not self.import_data(self.data_file, quiet=self.data_file != DATA_FILE):
             if self.data_file != DATA_FILE:
@@ -151,10 +155,12 @@ class Receipt(QMainWindow):
             cmb.setCurrentIndex(-1)
 
     def set_signals(self):
-        self.action_quick_receipt.triggered.connect(self.print_receipt)
+        self.action_print_doc_receipt.triggered.connect(self.print_doc_receipt)
+        self.action_print_money_receipt.triggered.connect(self.print_money_receipt)
         self.action_version.triggered.connect(self.about)
         self.action_json.triggered.connect(self.choose_data_file)
         self.actionOCR_Templates.triggered.connect(self.choose_templates_dir)
+        self.action_archive_root.triggered.connect(self.choose_archive_root)
         self.cmb_insurance_company.currentTextChanged.connect(self.check_insurance)
         self.cmb_insurance_extra_covers.currentIndexChanged.connect(self.check_extra_covers)
         self.cmb_insurance_legal.currentIndexChanged.connect(self.check_legal)
@@ -165,9 +171,9 @@ class Receipt(QMainWindow):
         self.button_grp_length.buttonClicked.connect(self.calculate_end_date)
         self.date_start.editingFinished.connect(self.calculate_end_date)
         self.btn_reset.clicked.connect(self.clear_ui)
-        self.btn_e_sign.clicked.connect(self.e_sign)
+        self.btn_create_documents.clicked.connect(self.create_documents)
         self.btn_exit.clicked.connect(QCoreApplication.instance().quit)
-        self.btn_print.clicked.connect(self.print_quick_receipt)
+        self.btn_print.clicked.connect(self.print_money_receipt)
         self.theme_switch.toggled.connect(self.toggle_theme)
         self.action_follow_windows.toggled.connect(self.toggle_follow_windows)
         QGuiApplication.styleHints().colorSchemeChanged.connect(
@@ -529,6 +535,15 @@ class Receipt(QMainWindow):
         self.templates = templates
         self.settings.setValue("templates_dir", path)
 
+    def choose_archive_root(self):
+        path = QFileDialog.getExistingDirectory(
+            self, "Διαδρομή φακέλου αποθήκευσης αρχείων", self.archive_root
+        )
+        if not path:
+            return
+        self.archive_root = os.path.normpath(path)
+        self.settings.setValue("archive_root", self.archive_root)
+
     def _refresh_customers(self):
         """Rebuild the match index and the accent/case-insensitive completer."""
         self.customer_index = names.build_index(self.customers)
@@ -571,7 +586,8 @@ class Receipt(QMainWindow):
             )
         )
 
-    def prepare_printing(self, receipt_only=False):
+    def prepare_printing(self, paralabi=True, eispraxi=False):
+        """Build the requested documents; returned in order PARALABI, EISPRAXI."""
         print_docs = []
 
         company_text = self.cmb_insurance_company.currentText()
@@ -620,7 +636,7 @@ class Receipt(QMainWindow):
             "start": self.date_start.date().toString("dd/MM/yyyy"),
         }
 
-        if not receipt_only:
+        if paralabi:
             doc_path = os.path.join(tempfile.gettempdir(), "print_paralabi.docx")
             with MailMerge(TEMPLATE_PARALABI) as document:
                 document.merge(**self.doc_entries)
@@ -633,7 +649,7 @@ class Receipt(QMainWindow):
             #     )
             # )
 
-        if self.chk_money_receipt.isChecked() or receipt_only:
+        if eispraxi:
             if self.lineedit_ra_policy.text() or \
               self.lineedit_legal_policy.text() or \
                 self.lineedit_extra_covers_policy.text():
@@ -697,8 +713,9 @@ class Receipt(QMainWindow):
             return
         self.lbl_receipt_number.setText(str(self.receipt_number))
 
-    def print_quick_receipt(self):
-        print_docs = self.prepare_printing(receipt_only=True)
+    def print_money_receipt(self):
+        """Print only the EISPRAXI document, regardless of the checkbox."""
+        print_docs = self.prepare_printing(paralabi=False, eispraxi=True)
         self.print_document(
             print_docs[0],
             tray_number=260,
@@ -706,23 +723,15 @@ class Receipt(QMainWindow):
         )
         self.update_receipt_number()
 
-    def print_receipt(self):
-        # self.update_receipt_number()
-        print_docs = self.prepare_printing()
+    def print_doc_receipt(self):
+        """Print only the PARALABI document, regardless of the checkbox."""
+        print_docs = self.prepare_printing(paralabi=True, eispraxi=False)
 
         print_tray = 259
         if self.action_tray1.isChecked():
             print_tray = 260
 
         self.print_document(print_docs[0], print_tray, black_ink_only=True)
-
-        if self.chk_money_receipt.isChecked():
-            self.print_document(
-                print_docs[1],
-                tray_number=260,
-                black_ink_only=True
-            )
-            self.update_receipt_number()
 
     def print_document(self, document, tray_number, black_ink_only):
         info_w = show_message(
@@ -775,14 +784,14 @@ class Receipt(QMainWindow):
 
         info_w.accept()
 
-    def e_sign(self):
+    def create_documents(self):
 
         info_w = show_message(
             msg_text="Προετοιμασία εγγράφων...",
             msg_type="no_buttons"
         )
 
-        def _open_pdf_file(pdf_filepath):
+        def _save_pdf_file(pdf_filepath):
             try:
                 word = client.Dispatch("Word.Application")
                 doc = word.Documents.Open(print_docs[0])
@@ -799,15 +808,22 @@ class Receipt(QMainWindow):
                 word.Quit()
                 return
 
-            subprocess.Popen(
-                [pdf_filepath],
-                shell=True
+            msg_reply = show_message(
+                f"Το αρχείο PDF αποθηκεύτηκε:\n{pdf_filepath}\n\n"
+                "Θέλετε να ανοίξει;",
+                msg_type="Question"
             )
+            if msg_reply == QMessageBox.StandardButton.Yes:
+                subprocess.Popen(
+                    [pdf_filepath],
+                    shell=True
+                )
 
-        print_docs = self.prepare_printing()
+        money_receipt = self.chk_money_receipt.isChecked()
+        print_docs = self.prepare_printing(paralabi=True, eispraxi=money_receipt)
 
         pdf_dir = os.path.join(
-            "\\\\DOM-SRV-01\\DominoInsurance\\Αρχείο",
+            self.archive_root,
             self.doc_entries["customer"],
             "receipts",
         )
@@ -841,15 +857,15 @@ class Receipt(QMainWindow):
                         msg_details=f"{e}"
                     )
                     return
-                _open_pdf_file(pdf_filepath)
+                _save_pdf_file(pdf_filepath)
             elif msg_reply == QMessageBox.StandardButton.No:
                 doc_path = print_docs[0].rsplit(".", 1)
                 pdf_tmp_filepath = doc_path[0] + ".pdf"
-                _open_pdf_file(pdf_tmp_filepath)
+                _save_pdf_file(pdf_tmp_filepath)
         else:
-            _open_pdf_file(pdf_filepath)
+            _save_pdf_file(pdf_filepath)
 
-        if self.chk_money_receipt.isChecked():
+        if money_receipt:
             self.print_document(
                 print_docs[1],
                 tray_number=260,
