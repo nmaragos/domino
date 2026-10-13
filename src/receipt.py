@@ -455,7 +455,7 @@ class Receipt(QMainWindow):
         """Load json_file; on failure keep current data and return False."""
         try:
             data, encoding = datafile.read_data(json_file)
-            receipt_number = int(data["id"]) + 1
+            receipt_number = datafile.next_number(data)
             lists = {
                 key: [item["name"] for item in data[key]]
                 for key in (
@@ -701,27 +701,73 @@ class Receipt(QMainWindow):
                 msg_type="Warning"
             )
             return False
+        self._apply_saved(merged)
+        return True
+
+    def _apply_saved(self, merged):
         self.json_data = merged
         self.customers = sorted(c["name"] for c in merged["customer"])
         self._refresh_customers()
-        self.receipt_number = max(self.receipt_number, int(merged["id"]) + 1)
-        return True
+        self.receipt_number = datafile.next_number(merged)
 
-    def update_receipt_number(self):
-        self.json_data["id"] = self.receipt_number
-        if not self.update_data_file():
+    def reserve_receipt_number(self):
+        """Claim a receipt number on disk before it is printed.
+
+        Returns the number, or None (and prints nothing) if the reservation
+        cannot be saved, so two instances never print the same number.
+        """
+        try:
+            merged, number = datafile.reserve_id(
+                self.data_file, self.json_data, self.data_encoding
+            )
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            show_message(
+                f"Unable to reserve receipt number. \n{e}",
+                msg_type="Warning"
+            )
+            return None
+        self._apply_saved(merged)
+        self.lbl_receipt_number.setText(str(number))
+        return number
+
+    def release_receipt_number(self, number):
+        """Return an unprinted receipt number to the pool so it is not skipped."""
+        try:
+            merged = datafile.release_id(
+                self.data_file, number, self.json_data, self.data_encoding
+            )
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            show_message(
+                f"Receipt number {number} was not printed and could not be "
+                f"released. It will be skipped. \n{e}",
+                msg_type="Warning"
+            )
             return
+        self._apply_saved(merged)
+        self.show_next_receipt_number()
+
+    def show_next_receipt_number(self):
         self.lbl_receipt_number.setText(str(self.receipt_number))
 
     def print_money_receipt(self):
         """Print only the EISPRAXI document, regardless of the checkbox."""
-        print_docs = self.prepare_printing(paralabi=False, eispraxi=True)
-        self.print_document(
-            print_docs[0],
-            tray_number=260,
-            black_ink_only=True
-        )
-        self.update_receipt_number()
+        number = self.reserve_receipt_number()
+        if number is None:
+            return
+        printed = False
+        try:
+            print_docs = self.prepare_printing(paralabi=False, eispraxi=True)
+            self.print_document(
+                print_docs[0],
+                tray_number=260,
+                black_ink_only=True
+            )
+            printed = True
+        finally:
+            if printed:
+                self.show_next_receipt_number()
+            else:
+                self.release_receipt_number(number)
 
     def print_doc_receipt(self):
         """Print only the PARALABI document, regardless of the checkbox."""
@@ -791,6 +837,27 @@ class Receipt(QMainWindow):
             msg_type="no_buttons"
         )
 
+        money_receipt = self.chk_money_receipt.isChecked()
+        number = None
+        if money_receipt:
+            number = self.reserve_receipt_number()
+            if number is None:
+                info_w.accept()
+                return
+
+        printed = False
+        try:
+            printed = self._print_documents(info_w, money_receipt)
+        finally:
+            if money_receipt:
+                if printed:
+                    self.show_next_receipt_number()
+                else:
+                    self.release_receipt_number(number)
+
+    def _print_documents(self, info_w, money_receipt):
+        """Build, archive and print the documents; True if the money receipt printed."""
+
         def _save_pdf_file(pdf_filepath):
             try:
                 word = client.Dispatch("Word.Application")
@@ -819,7 +886,6 @@ class Receipt(QMainWindow):
                     shell=True
                 )
 
-        money_receipt = self.chk_money_receipt.isChecked()
         print_docs = self.prepare_printing(paralabi=True, eispraxi=money_receipt)
 
         pdf_dir = os.path.join(
@@ -865,15 +931,17 @@ class Receipt(QMainWindow):
         else:
             _save_pdf_file(pdf_filepath)
 
+        printed = False
         if money_receipt:
             self.print_document(
                 print_docs[1],
                 tray_number=260,
                 black_ink_only=True
             )
-            self.update_receipt_number()
+            printed = True
 
         info_w.accept()
+        return printed
 
     def check_insurance(self, insurance):
         if insurance in ["ARAG", "MEDITERRANIA"]:
