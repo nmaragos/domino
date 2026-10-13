@@ -29,8 +29,9 @@ from helpers import (
 )
 
 UI_FILE = resource_path("receipt.ui")
-DATA_FILE = "\\\\DOM-SRV-01\\DominoInsurance\\software\record.json"
-ARCHIVE_ROOT = "\\\\DOM-SRV-01\\DominoInsurance\\Αρχείο"
+DATA_FILE = r"\\DOM-SRV-01\DominoInsurance\software\record.json"
+ARCHIVE_ROOT = r"\\DOM-SRV-01\DominoInsurance\Αρχείο"
+SIGNOSIGN_EXE = r"C:\Program Files\signotec\signoSign2\signoSign2.exe"
 TEMPLATE_EISPRAXI = resource_path("resource", "eispraxi_template.docx")
 TEMPLATE_PARALABI = resource_path("resource", "paralabi_template.docx")
 RADIO_GRP_MAPPING = {
@@ -44,6 +45,14 @@ VERSION = "2.3.0"
 
 
 CUSTOMER_KEY_ROLE = Qt.ItemDataRole.UserRole + 1
+
+
+def open_pdf(pdf_filepath):
+    """Open in signoSign2 if installed, otherwise in the default PDF viewer."""
+    if os.path.isfile(SIGNOSIGN_EXE):
+        subprocess.Popen([SIGNOSIGN_EXE, pdf_filepath])
+    else:
+        os.startfile(pdf_filepath)
 
 
 class CustomerCompleter(QCompleter):
@@ -859,32 +868,40 @@ class Receipt(QMainWindow):
         """Build, archive and print the documents; True if the money receipt printed."""
 
         def _save_pdf_file(pdf_filepath):
+            """Save the paralabi as PDF; False if it failed (already reported)."""
+            word = doc = None
             try:
                 word = client.Dispatch("Word.Application")
                 doc = word.Documents.Open(print_docs[0])
                 doc.SaveAs(pdf_filepath, FileFormat=17)  # FileFormat for PDF
-                doc.Close()
-                word.Quit()
             except Exception as e:
                 show_message(
                     f"Unable to save file\n{pdf_filepath}\n{e}",
                     msg_title="Error",
                     msg_type="Critical"
                 )
-                doc.Close()
-                word.Quit()
-                return
+                return False
+            finally:
+                # Best effort: only close what was actually opened.
+                if doc is not None:
+                    try:
+                        doc.Close()
+                    except Exception:
+                        pass
+                if word is not None:
+                    try:
+                        word.Quit()
+                    except Exception:
+                        pass
 
             msg_reply = show_message(
                 f"Το αρχείο PDF αποθηκεύτηκε:\n{pdf_filepath}\n\n"
-                "Θέλετε να ανοίξει;",
-                msg_type="Question"
+                "Άνοιγμα για υπογραφή τώρα;",
+                msg_type="YesNo"
             )
             if msg_reply == QMessageBox.StandardButton.Yes:
-                subprocess.Popen(
-                    [pdf_filepath],
-                    shell=True
-                )
+                open_pdf(pdf_filepath)
+            return True
 
         print_docs = self.prepare_printing(paralabi=True, eispraxi=money_receipt)
 
@@ -907,7 +924,9 @@ class Receipt(QMainWindow):
 
         pdf_filepath = os.path.join(pdf_dir, pdf_filename)
 
-        if not os.path.isdir(pdf_dir):
+        if os.path.isdir(pdf_dir):
+            target_pdf = pdf_filepath
+        else:
             msg_reply = show_message(
                 f"New directory will be created:\n{pdf_dir}",
                 msg_type="Question"
@@ -922,14 +941,22 @@ class Receipt(QMainWindow):
                         msg_title="Error",
                         msg_details=f"{e}"
                     )
-                    return
-                _save_pdf_file(pdf_filepath)
+                    info_w.accept()
+                    return False
+                target_pdf = pdf_filepath
             elif msg_reply == QMessageBox.StandardButton.No:
                 doc_path = print_docs[0].rsplit(".", 1)
-                pdf_tmp_filepath = doc_path[0] + ".pdf"
-                _save_pdf_file(pdf_tmp_filepath)
-        else:
-            _save_pdf_file(pdf_filepath)
+                target_pdf = doc_path[0] + ".pdf"
+            else:
+                # Cancel: nothing archived, nothing printed.
+                info_w.accept()
+                return False
+
+        # A failed save stops the action here, so no receipt number is used
+        # for a document that was never archived.
+        if not _save_pdf_file(target_pdf):
+            info_w.accept()
+            return False
 
         printed = False
         if money_receipt:
