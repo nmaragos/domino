@@ -266,13 +266,12 @@ def show_message(
 ):
     msg_box = QMessageBox(QMessageBox.Icon.Information, msg_title, msg_text)
 
-    if msg_type == "Question":
+    if msg_type in ("Question", "YesNo"):
         msg_box.setIcon(QMessageBox.Icon.Question)
-        msg_box.setStandardButtons(
-            QMessageBox.StandardButton.Yes |
-            QMessageBox.StandardButton.No |
-            QMessageBox.StandardButton.Cancel
-        )
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        if msg_type == "Question":
+            buttons |= QMessageBox.StandardButton.Cancel
+        msg_box.setStandardButtons(buttons)
     elif msg_type == "Critical":
         msg_box.setIcon(QMessageBox.Icon.Critical)
     elif msg_type == "Warning":

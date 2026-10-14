@@ -102,3 +102,48 @@ def save_merged(path, memory, encoding=LEGACY_ENCODING):
         merged = merge(disk, memory)
         write_data(path, merged, encoding)
     return merged
+
+
+def next_number(data):
+    """The receipt number the next print will use: lowest free one, else id + 1."""
+    free = data.get("free_ids")
+    return min(free) if free else int(data["id"]) + 1
+
+
+def reserve_id(path, memory, encoding=LEGACY_ENCODING):
+    """Under lock: claim a receipt number on disk before printing.
+
+    Released numbers in `free_ids` are reused first, so no number is skipped.
+    `id` is the highest number ever issued and never decreases, so a stale
+    in-memory copy merged with `max` cannot hand a number out twice.
+    Returns (merged, number). The write raises if it cannot be saved, in
+    which case nothing should be printed.
+    """
+    with locked(path):
+        try:
+            disk, _ = read_data(path)
+        except FileNotFoundError:
+            disk = memory
+        merged = merge(disk, memory)
+        free = sorted(merged.get("free_ids", []))
+        if free:
+            number = free.pop(0)
+            merged["free_ids"] = free
+        else:
+            number = int(merged["id"]) + 1
+            merged["id"] = number
+        write_data(path, merged, encoding)
+    return merged, number
+
+
+def release_id(path, number, memory, encoding=LEGACY_ENCODING):
+    """Under lock: return an unprinted receipt number to the pool for reuse."""
+    with locked(path):
+        try:
+            disk, _ = read_data(path)
+        except FileNotFoundError:
+            disk = memory
+        merged = merge(disk, memory)
+        merged["free_ids"] = sorted(set(merged.get("free_ids", [])) | {number})
+        write_data(path, merged, encoding)
+    return merged

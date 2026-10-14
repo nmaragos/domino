@@ -29,8 +29,9 @@ from helpers import (
 )
 
 UI_FILE = resource_path("receipt.ui")
-DATA_FILE = "\\\\DOM-SRV-01\\DominoInsurance\\software\record.json"
-ARCHIVE_ROOT = "\\\\DOM-SRV-01\\DominoInsurance\\Αρχείο"
+DATA_FILE = r"\\DOM-SRV-01\DominoInsurance\software\record.json"
+ARCHIVE_ROOT = r"\\DOM-SRV-01\DominoInsurance\Αρχείο"
+SIGNOSIGN_EXE = r"C:\Program Files\signotec\signoSign2\signoSign2.exe"
 TEMPLATE_EISPRAXI = resource_path("resource", "eispraxi_template.docx")
 TEMPLATE_PARALABI = resource_path("resource", "paralabi_template.docx")
 RADIO_GRP_MAPPING = {
@@ -40,10 +41,18 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.3.0"
+VERSION = "2.4.0"
 
 
 CUSTOMER_KEY_ROLE = Qt.ItemDataRole.UserRole + 1
+
+
+def open_pdf(pdf_filepath):
+    """Open in signoSign2 if installed, otherwise in the default PDF viewer."""
+    if os.path.isfile(SIGNOSIGN_EXE):
+        subprocess.Popen([SIGNOSIGN_EXE, pdf_filepath])
+    else:
+        os.startfile(pdf_filepath)
 
 
 class CustomerCompleter(QCompleter):
@@ -455,7 +464,7 @@ class Receipt(QMainWindow):
         """Load json_file; on failure keep current data and return False."""
         try:
             data, encoding = datafile.read_data(json_file)
-            receipt_number = int(data["id"]) + 1
+            receipt_number = datafile.next_number(data)
             lists = {
                 key: [item["name"] for item in data[key]]
                 for key in (
@@ -701,27 +710,73 @@ class Receipt(QMainWindow):
                 msg_type="Warning"
             )
             return False
+        self._apply_saved(merged)
+        return True
+
+    def _apply_saved(self, merged):
         self.json_data = merged
         self.customers = sorted(c["name"] for c in merged["customer"])
         self._refresh_customers()
-        self.receipt_number = max(self.receipt_number, int(merged["id"]) + 1)
-        return True
+        self.receipt_number = datafile.next_number(merged)
 
-    def update_receipt_number(self):
-        self.json_data["id"] = self.receipt_number
-        if not self.update_data_file():
+    def reserve_receipt_number(self):
+        """Claim a receipt number on disk before it is printed.
+
+        Returns the number, or None (and prints nothing) if the reservation
+        cannot be saved, so two instances never print the same number.
+        """
+        try:
+            merged, number = datafile.reserve_id(
+                self.data_file, self.json_data, self.data_encoding
+            )
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            show_message(
+                f"Unable to reserve receipt number. \n{e}",
+                msg_type="Warning"
+            )
+            return None
+        self._apply_saved(merged)
+        self.lbl_receipt_number.setText(str(number))
+        return number
+
+    def release_receipt_number(self, number):
+        """Return an unprinted receipt number to the pool so it is not skipped."""
+        try:
+            merged = datafile.release_id(
+                self.data_file, number, self.json_data, self.data_encoding
+            )
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            show_message(
+                f"Receipt number {number} was not printed and could not be "
+                f"released. It will be skipped. \n{e}",
+                msg_type="Warning"
+            )
             return
+        self._apply_saved(merged)
+        self.show_next_receipt_number()
+
+    def show_next_receipt_number(self):
         self.lbl_receipt_number.setText(str(self.receipt_number))
 
     def print_money_receipt(self):
         """Print only the EISPRAXI document, regardless of the checkbox."""
-        print_docs = self.prepare_printing(paralabi=False, eispraxi=True)
-        self.print_document(
-            print_docs[0],
-            tray_number=260,
-            black_ink_only=True
-        )
-        self.update_receipt_number()
+        number = self.reserve_receipt_number()
+        if number is None:
+            return
+        printed = False
+        try:
+            print_docs = self.prepare_printing(paralabi=False, eispraxi=True)
+            self.print_document(
+                print_docs[0],
+                tray_number=260,
+                black_ink_only=True
+            )
+            printed = True
+        finally:
+            if printed:
+                self.show_next_receipt_number()
+            else:
+                self.release_receipt_number(number)
 
     def print_doc_receipt(self):
         """Print only the PARALABI document, regardless of the checkbox."""
@@ -791,35 +846,63 @@ class Receipt(QMainWindow):
             msg_type="no_buttons"
         )
 
+        money_receipt = self.chk_money_receipt.isChecked()
+        number = None
+        if money_receipt:
+            number = self.reserve_receipt_number()
+            if number is None:
+                info_w.accept()
+                return
+
+        printed = False
+        try:
+            printed = self._print_documents(info_w, money_receipt)
+        finally:
+            if money_receipt:
+                if printed:
+                    self.show_next_receipt_number()
+                else:
+                    self.release_receipt_number(number)
+
+    def _print_documents(self, info_w, money_receipt):
+        """Build, archive and print the documents; True if the money receipt printed."""
+
         def _save_pdf_file(pdf_filepath):
+            """Save the paralabi as PDF; False if it failed (already reported)."""
+            word = doc = None
             try:
                 word = client.Dispatch("Word.Application")
                 doc = word.Documents.Open(print_docs[0])
                 doc.SaveAs(pdf_filepath, FileFormat=17)  # FileFormat for PDF
-                doc.Close()
-                word.Quit()
             except Exception as e:
                 show_message(
                     f"Unable to save file\n{pdf_filepath}\n{e}",
                     msg_title="Error",
                     msg_type="Critical"
                 )
-                doc.Close()
-                word.Quit()
-                return
+                return False
+            finally:
+                # Best effort: only close what was actually opened.
+                if doc is not None:
+                    try:
+                        doc.Close()
+                    except Exception:
+                        pass
+                if word is not None:
+                    try:
+                        word.Quit()
+                    except Exception:
+                        pass
 
             msg_reply = show_message(
                 f"Το αρχείο PDF αποθηκεύτηκε:\n{pdf_filepath}\n\n"
-                "Θέλετε να ανοίξει;",
-                msg_type="Question"
+                "Άνοιγμα για υπογραφή τώρα;",
+                msg_type="YesNo"
             )
             if msg_reply == QMessageBox.StandardButton.Yes:
-                subprocess.Popen(
-                    [pdf_filepath],
-                    shell=True
-                )
+                open_pdf(pdf_filepath)
+            return True
 
-        money_receipt = self.chk_money_receipt.isChecked()
         print_docs = self.prepare_printing(paralabi=True, eispraxi=money_receipt)
 
         pdf_dir = os.path.join(
@@ -841,7 +924,9 @@ class Receipt(QMainWindow):
 
         pdf_filepath = os.path.join(pdf_dir, pdf_filename)
 
-        if not os.path.isdir(pdf_dir):
+        if os.path.isdir(pdf_dir):
+            target_pdf = pdf_filepath
+        else:
             msg_reply = show_message(
                 f"New directory will be created:\n{pdf_dir}",
                 msg_type="Question"
@@ -856,24 +941,34 @@ class Receipt(QMainWindow):
                         msg_title="Error",
                         msg_details=f"{e}"
                     )
-                    return
-                _save_pdf_file(pdf_filepath)
+                    info_w.accept()
+                    return False
+                target_pdf = pdf_filepath
             elif msg_reply == QMessageBox.StandardButton.No:
                 doc_path = print_docs[0].rsplit(".", 1)
-                pdf_tmp_filepath = doc_path[0] + ".pdf"
-                _save_pdf_file(pdf_tmp_filepath)
-        else:
-            _save_pdf_file(pdf_filepath)
+                target_pdf = doc_path[0] + ".pdf"
+            else:
+                # Cancel: nothing archived, nothing printed.
+                info_w.accept()
+                return False
 
+        # A failed save stops the action here, so no receipt number is used
+        # for a document that was never archived.
+        if not _save_pdf_file(target_pdf):
+            info_w.accept()
+            return False
+
+        printed = False
         if money_receipt:
             self.print_document(
                 print_docs[1],
                 tray_number=260,
                 black_ink_only=True
             )
-            self.update_receipt_number()
+            printed = True
 
         info_w.accept()
+        return printed
 
     def check_insurance(self, insurance):
         if insurance in ["ARAG", "MEDITERRANIA"]:
