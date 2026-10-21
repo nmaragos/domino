@@ -498,9 +498,6 @@
     </property>
    </widget>
    <widget class="QPushButton" name="btn_print">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
     <property name="geometry">
      <rect>
       <x>425</x>
@@ -510,8 +507,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Εκτύπωση
-Απόδ. Είσπραξης</string>
+     <string>Αίτηση</string>
     </property>
    </widget>
    <widget class="QPushButton" name="btn_exit">

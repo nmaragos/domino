@@ -104,6 +104,31 @@ def save_merged(path, memory, encoding=LEGACY_ENCODING):
     return merged
 
 
+def update_customer(path, name, fields, memory, encoding=LEGACY_ENCODING):
+    """Under lock: set `fields` on the customer `name`, return the merged data.
+
+    Empty values remove the key. The customer is added if it is not known yet.
+    """
+    with locked(path):
+        try:
+            disk, _ = read_data(path)
+        except FileNotFoundError:
+            disk = memory
+        merged = merge(disk, memory)
+        customers = merged["customer"]
+        entry = next((c for c in customers if c["name"] == name), None)
+        if entry is None:
+            entry = {"name": name}
+            customers.append(entry)
+        for key, value in fields.items():
+            if value in (None, "", [], {}):
+                entry.pop(key, None)
+            else:
+                entry[key] = value
+        write_data(path, merged, encoding)
+    return merged
+
+
 def next_number(data):
     """The receipt number the next print will use: lowest free one, else id + 1."""
     free = data.get("free_ids")

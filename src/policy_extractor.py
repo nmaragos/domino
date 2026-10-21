@@ -70,6 +70,11 @@ def _normalise_amount(value):
     return None
 
 
+def normalise_plate(value):
+    """'ham 1234' -> 'ΗΑΜ1234': no spaces or dashes, capitals, Greek lookalike letters."""
+    return re.sub(r"[\s-]", "", value or "").upper().translate(_LATIN_TO_GREEK)
+
+
 def extract(text, template):
     """Apply template regexes to text. Invalid values become None."""
     out = {}
@@ -85,7 +90,7 @@ def extract(text, template):
         if is_person:  # companies/other shapes stay untouched
             out["customer"] = reorder(words)
     if out.get("plate"):
-        out["plate"] = re.sub(r"[\s-]", "", out["plate"]).upper().translate(_LATIN_TO_GREEK)
+        out["plate"] = normalise_plate(out["plate"])
     if out.get("policy"):
         out["policy"] = re.sub(r"\s*/\s*", "/", out["policy"])
     if out.get("amount"):

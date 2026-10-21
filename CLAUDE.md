@@ -14,6 +14,12 @@ PyQt6 desktop app (Windows, Greek UI) that prints insurance receipts. Dropping p
 - Passing `tools/test.py` only proves fields were captured, not that they are right. Print `policy_extractor.extract(...)` values and compare with the text: customer is a real SURNAME FIRST name (no labels, no patronymic), amount is the total premium payable, plate is Greek letters.
 - Fix shared problems (dates, plates, names, amounts) in `policy_extractor.py`, not per template.
 
+## Application form (Αίτηση)
+- "Αίτηση" button (`btn_print`) -> `application_dialog.ApplicationDialog` -> `application_pdf` (HTML -> PDF via Qt, one A4 page). Decisions: `docs/GOALS.md`.
+- Customer details (TIN, address, ...) and `vehicles` (per plate) are stored on the customer entry in `record.json` via `datafile.update_customer`.
+- Extra-cover catalogues: `covers/<company>.json`, keyed by the `record.json` company name. Layout self-check: `uv run python tools\test_application.py` (needs a normal desktop session; offscreen has no fonts).
+- Archive names: `ΑΙΤΗΣΗ_<plate|branch>_<yyyy.mm.dd>.pdf` and `ΑΠΟΔΕΙΞΗ_...` for receipts, same folder (`Receipt._archive_location`).
+
 ## Data and git
 - `samples/` holds real customer PDFs: gitignored, never commit, never paste their contents into commits or docs.
 - Never commit the local `DATA_FILE` path edit in `src/receipt.py` (unstage that hunk).

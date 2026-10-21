@@ -10,10 +10,14 @@ from mailmerge import MailMerge
 from PyQt6 import uic
 from PyQt6.QtCore import QCoreApplication, QDate, QEvent, Qt, QSettings
 from PyQt6.QtGui import QGuiApplication, QStandardItem, QStandardItemModel
+from PyQt6.QtPrintSupport import QPrintDialog, QPrinter
 from PyQt6.QtWidgets import *
 from win32com import client
 import win32print
 
+import application_dialog
+import application_pdf
+import covers
 import datafile
 import names
 import policy_extractor
@@ -100,6 +104,7 @@ class Receipt(QMainWindow):
             self.settings.value("archive_root", ARCHIVE_ROOT)
         )
         self.templates = policy_extractor.load_templates(self.templates_dir)
+        self.cover_catalogs = covers.load_catalogs()
         if not self.import_data(self.data_file, quiet=self.data_file != DATA_FILE):
             if self.data_file != DATA_FILE:
                 self.data_file = DATA_FILE
@@ -182,7 +187,7 @@ class Receipt(QMainWindow):
         self.btn_reset.clicked.connect(self.clear_ui)
         self.btn_create_documents.clicked.connect(self.create_documents)
         self.btn_exit.clicked.connect(QCoreApplication.instance().quit)
-        self.btn_print.clicked.connect(self.print_money_receipt)
+        self.btn_print.clicked.connect(self.open_application)
         self.theme_switch.toggled.connect(self.toggle_theme)
         self.action_follow_windows.toggled.connect(self.toggle_follow_windows)
         QGuiApplication.styleHints().colorSchemeChanged.connect(
@@ -864,6 +869,155 @@ class Receipt(QMainWindow):
                 else:
                     self.release_receipt_number(number)
 
+    def _archive_location(self, prefix):
+        """(folder, file name) in the archive for a document of the current form."""
+        pdf_dir = os.path.join(
+            self.archive_root,
+            self.lineedit_customer.text(),
+            "receipts",
+        )
+        date_format = ".".join(
+            reversed(self.date_start.date().toString("dd/MM/yyyy").split("/"))
+        )
+        subject = self.lineedit_plate.text() or self.cmb_insurance_type.currentText()
+        return pdf_dir, f"{prefix}{subject}_{date_format}.pdf"
+
+    def _saved_customer(self, name):
+        """The customer's entry in the data file (name only if never stored)."""
+        return next(
+            (c for c in self.json_data["customer"] if c["name"] == name),
+            {"name": name},
+        )
+
+    def open_application(self):
+        """Collect the data of an insurance application, then save or print it."""
+        customer_name = self.lineedit_customer.text().strip()
+        insurance_type = self.cmb_insurance_type.currentText()
+        if not customer_name or not insurance_type or not self.cmb_insurance_company.currentText():
+            show_message(
+                "Συμπληρώστε πελάτη, ασφαλιστική εταιρία και κλάδο πριν την αίτηση.",
+                msg_type="Warning",
+            )
+            return
+
+        extra_companies = sorted(
+            set(self.insurance_ra + self.insurance_legal + self.insurance_extra_covers)
+        )
+        extra_rows = [
+            cmb.currentText()
+            for cmb in (
+                self.cmb_insurance_ra,
+                self.cmb_insurance_legal,
+                self.cmb_insurance_extra_covers,
+            )
+            if cmb.currentText()
+        ]
+        dialog = application_dialog.ApplicationDialog(
+            {
+                "type": insurance_type,
+                "company": self.cmb_insurance_company.currentText(),
+                "start": self.date_start.date().toString("dd/MM/yyyy"),
+                "end": self.date_end.date().toString("dd/MM/yyyy"),
+                "amount": self.lineedit_amount.text(),
+                "date": QDate.currentDate().toString("dd/MM/yyyy"),
+                "customer": self._saved_customer(customer_name),
+                "plate": self.lineedit_plate.text().strip(),
+                "extra_companies": extra_companies,
+                "extra_rows": extra_rows,
+                "catalogs": self.cover_catalogs,
+            },
+            self,
+        )
+        action = dialog.exec()
+        if not action:
+            return
+
+        self._save_customer_details(
+            customer_name,
+            dialog.customer_fields(),
+            dialog.vehicle_fields(),
+            dialog.replaced_plate,
+        )
+        data = dialog.application_data()
+        if action == dialog.PRINT:
+            printer = QPrinter()
+            if QPrintDialog(printer, self).exec():
+                application_pdf.print_document(application_pdf.build_document(data), printer)
+        else:
+            self._archive_application(data)
+
+    def _save_customer_details(self, name, fields, vehicle, replaced_plate=None):
+        """Store the application data on the customer; failures are only reported.
+
+        The vehicle replaces the saved one with the same plate (ignoring case,
+        spaces and Latin/Greek lookalike letters), and `replaced_plate` if given.
+        """
+        fields = dict(fields)
+        if vehicle is not None and vehicle.get("plate"):
+            replaced = {policy_extractor.normalise_plate(p) for p in (vehicle["plate"], replaced_plate)}
+            vehicles = [
+                v for v in self._saved_customer(name).get("vehicles", [])
+                if policy_extractor.normalise_plate(v.get("plate")) not in replaced
+            ]
+            fields["vehicles"] = vehicles + [{k: v for k, v in vehicle.items() if v}]
+        try:
+            merged = datafile.update_customer(
+                self.data_file, name, fields, self.json_data, self.data_encoding
+            )
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            show_message(
+                f"Δεν αποθηκεύτηκαν τα στοιχεία του πελάτη.\n{e}",
+                msg_type="Warning",
+            )
+            return
+        self._apply_saved(merged)
+
+    def _archive_application(self, data):
+        pdf_dir, pdf_filename = self._archive_location("ΑΙΤΗΣΗ_")
+        pdf_filepath = os.path.join(pdf_dir, pdf_filename)
+
+        if not os.path.isdir(pdf_dir):
+            reply = show_message(
+                f"New directory will be created:\n{pdf_dir}",
+                msg_type="YesNo",
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            try:
+                os.makedirs(pdf_dir)
+            except OSError as e:
+                show_message(
+                    f"Unable to create directories\n{pdf_dir}",
+                    msg_type="Critical",
+                    msg_title="Error",
+                    msg_details=f"{e}",
+                )
+                return
+        elif os.path.exists(pdf_filepath):
+            reply = show_message(
+                f"Το αρχείο υπάρχει ήδη:\n{pdf_filepath}\n\nΑντικατάσταση;",
+                msg_type="YesNo",
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        try:
+            application_pdf.write_pdf(data, pdf_filepath)
+        except OSError as e:
+            show_message(
+                f"Unable to save file\n{pdf_filepath}\n{e}",
+                msg_title="Error",
+                msg_type="Critical",
+            )
+            return
+
+        reply = show_message(
+            f"Το αρχείο PDF αποθηκεύτηκε:\n{pdf_filepath}\n\nΆνοιγμα για υπογραφή τώρα;",
+            msg_type="YesNo",
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            open_pdf(pdf_filepath)
+
     def _print_documents(self, info_w, money_receipt):
         """Build, archive and print the documents; True if the money receipt printed."""
 
@@ -905,23 +1059,7 @@ class Receipt(QMainWindow):
 
         print_docs = self.prepare_printing(paralabi=True, eispraxi=money_receipt)
 
-        pdf_dir = os.path.join(
-            self.archive_root,
-            self.doc_entries["customer"],
-            "receipts",
-        )
-
-        date_format = self.doc_entries["start"].split("/")
-        date_format.reverse()
-        date_format = ".".join(date_format)
-
-        if self.doc_entries["plate"]:
-            pdf_filename = self.doc_entries["plate"] + "_" + date_format + \
-                " - signed.pdf"
-        else:
-            pdf_filename = self.doc_entries["branch"] + "_" + date_format + \
-                " - signed.pdf"
-
+        pdf_dir, pdf_filename = self._archive_location("ΑΠΟΔΕΙΞΗ_")
         pdf_filepath = os.path.join(pdf_dir, pdf_filename)
 
         if os.path.isdir(pdf_dir):

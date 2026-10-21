@@ -7,6 +7,7 @@ a = Analysis(
         ("src/calculator.ui", "."),
         ("src/resource", "resource"),
         ("templates", "templates"),
+        ("covers", "covers"),
     ],
     hiddenimports=["win32com.client", "win32timezone"],
 )

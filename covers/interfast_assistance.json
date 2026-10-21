@@ -1,0 +1,60 @@
+{
+  "company": "INTERFAST_ASSISTANCE",
+  "covers": [
+    {
+      "name": "FAST 1",
+      "net": 37.37,
+      "total": 44.01
+    },
+    {
+      "name": "FAST 2",
+      "net": 39.91,
+      "total": 47.0
+    },
+    {
+      "name": "FAST 3",
+      "net": 45.01,
+      "total": 53.0
+    },
+    {
+      "name": "FAST 4",
+      "net": 55.2,
+      "total": 65.0
+    },
+    {
+      "name": "ΑΠΛΟ",
+      "net": 52.65,
+      "total": 62.0
+    },
+    {
+      "name": "ΠΑΚ 1",
+      "net": 23.77,
+      "total": 28.0
+    },
+    {
+      "name": "ΠΑΚ 2",
+      "net": 25.48,
+      "total": 30.0
+    },
+    {
+      "name": "ΠΑΚ 3",
+      "net": 33.97,
+      "total": 40.01
+    },
+    {
+      "name": "ΠΑΚ 4",
+      "net": 42.46,
+      "total": 50.0
+    },
+    {
+      "name": "SUPER 1",
+      "net": 67.94,
+      "total": 80.01
+    },
+    {
+      "name": "SUPER 2",
+      "net": 169.84,
+      "total": 200.01
+    }
+  ]
+}
