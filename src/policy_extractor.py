@@ -4,6 +4,8 @@ import re
 import sys
 from datetime import datetime
 
+import names
+
 TEMPLATES_DIR = os.path.join(
     getattr(sys, "_MEIPASS", None)
     or os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -18,6 +20,11 @@ _NAME_ORDERS = {
     "last_first_father": (3, lambda w: f"{w[0]} {w[1]}"),
 }
 FIELDS = ("policy", "plate", "start", "end", "amount", "customer")
+# optional template key "details": extra data for the application form, same regex rules as "fields"
+DETAIL_FIELDS = (
+    "tin", "tax_office", "address", "zip", "city", "phone", "mobile", "email",
+    "make", "model", "hp", "seats", "usage",
+)
 
 
 def load_templates(templates_dir=TEMPLATES_DIR):
@@ -70,17 +77,50 @@ def _normalise_amount(value):
     return None
 
 
+def greek_lookalikes(value):
+    """Capitals with Latin letters that look Greek turned into Greek: 'E.I.X.' -> 'Ε.Ι.Χ.'."""
+    return (value or "").upper().translate(_LATIN_TO_GREEK)
+
+
+# usage printed by insurers -> the abbreviation the office uses (compared without periods and spaces)
+_USAGE_ALIASES = {
+    "ΙΔΙΩΤΙΚΗ": "ΕΙΧ",
+    "ΙΔΙΩΤΙΚΗΧΡΗΣΗ": "ΕΙΧ",
+    "ΙΔΙΩΤΙΚΗΣΧΡΗΣΗΣ": "ΕΙΧ",
+}
+
+
+# the office's own addresses: policies carry them when the customer has no email of their own
+_OFFICE_EMAILS = ("maragos.asfaleies@", "@dominogroup.gr")
+
+# what insurers print when a value is unknown: never fill these in
+_PLACEHOLDERS = {"OTHER MODEL", "OTHER", "N/A", "ΑΛΛΟ", "ΑΛΛΟ ΜΟΝΤΕΛΟ", "ΑΓΝΩΣΤΟ", "ΧΩΡΙΣ"}
+
+
+def canonical_usage(value):
+    """Usage in a form where equal meanings compare equal: 'E.I.X.', 'ΕΙΧ', 'Ιδιωτική' -> 'ΕΙΧ'."""
+    key = greek_lookalikes(names.name_key(value or "")).replace(".", "").replace(" ", "")
+    return _USAGE_ALIASES.get(key, key)
+
+
 def normalise_plate(value):
     """'ham 1234' -> 'ΗΑΜ1234': no spaces or dashes, capitals, Greek lookalike letters."""
-    return re.sub(r"[\s-]", "", value or "").upper().translate(_LATIN_TO_GREEK)
+    return greek_lookalikes(re.sub(r"[\s-]", "", value or ""))
+
+
+def _match(pattern, text):
+    """First match of `pattern`; several capture groups are joined with a space."""
+    match = re.search(pattern, text, re.MULTILINE)
+    if not match or not match.groups():
+        return None
+    return " ".join(g.strip() for g in match.groups() if g) or None
 
 
 def extract(text, template):
     """Apply template regexes to text. Invalid values become None."""
     out = {}
     for field, pattern in template.get("fields", {}).items():
-        match = re.search(pattern, text, re.MULTILINE)
-        out[field] = " ".join(g.strip() for g in match.groups() if g) if match and match.groups() else None
+        out[field] = _match(pattern, text)
 
     order = _NAME_ORDERS.get(template.get("name_order"))
     if order and out.get("customer"):
@@ -110,3 +150,61 @@ def extract(text, template):
 def validate(values):
     """Return list of (field, value) problems; empty means all good."""
     return [(f, v) for f, v in values.items() if v is None]
+
+
+def _digits(value):
+    return re.sub(r"\D", "", value)
+
+
+def _phone_kind(value):
+    """('phone'|'mobile', 10 digits) for a Greek number, else None."""
+    digits = _digits(value)
+    if digits.startswith("0030"):
+        digits = digits[4:]
+    elif len(digits) == 12 and digits.startswith("30"):
+        digits = digits[2:]
+    if len(digits) != 10:
+        return None
+    if digits.startswith("69"):
+        return "mobile", digits
+    if digits.startswith("2"):
+        return "phone", digits
+    return None
+
+
+def normalise_details(raw):
+    """Clean raw detail strings; fields that don't look right are left out."""
+    out = {}
+    tin = _digits(raw.get("tin") or "")
+    if len(tin) == 9:
+        out["tin"] = tin
+    zip_code = _digits(raw.get("zip") or "")
+    if len(zip_code) == 5:
+        out["zip"] = zip_code
+    for key in ("phone", "mobile"):  # a number goes where it belongs, whatever label it had
+        kind = _phone_kind(raw.get(key) or "")
+        if kind:
+            out.setdefault(*kind)
+    email = (raw.get("email") or "").strip().lower()
+    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) and not any(o in email for o in _OFFICE_EMAILS):
+        out["email"] = email
+    for key, low, high in (("hp", 1, 9999), ("seats", 1, 99)):
+        number = re.sub(r"[.,\s]", "", raw.get(key) or "")
+        if number.isdigit() and low <= int(number) <= high:
+            out[key] = str(int(number))
+    for key in ("address", "city", "tax_office", "make", "model", "usage"):
+        text = names.name_key((raw.get(key) or "").strip(" ,.-"))
+        if key == "usage":  # 'E.I.X.', 'Ιδιωτική' = 'ΕΙΧ'; others stay as printed, in Greek letters
+            text = "ΕΙΧ" if canonical_usage(text) == "ΕΙΧ" else greek_lookalikes(text)
+        if len(text) > 1 and text not in _PLACEHOLDERS:
+            out[key] = text
+    return out
+
+
+def extract_details(text, template):
+    """Application-form data of a policy: only the fields that were found and look valid."""
+    raw = {
+        field: _match(pattern, text)
+        for field, pattern in template.get("details", {}).items()
+    }
+    return normalise_details({k: v for k, v in raw.items() if v})

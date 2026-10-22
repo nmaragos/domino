@@ -30,4 +30,12 @@ PER INSURER
 4. Several layouts (car vs home, etc.): one template per layout with distinct detect strings.
 5. Reply with one line: "<insurer>: N templates, unresolved: <fields or none>".
 
+DETAILS (second pass, once the fields above work): add a "details" key to each template with regexes for the application form.
+- Keys: tin, tax_office, address, zip, city, phone, mobile, email, make, model, hp, seats, usage. Nothing else (no birth date, licence, profession, colour, package).
+- Same regex rules as "fields". Several keys may use the same line (address / city / zip from "STREET 1 CITY T.K. 12345"); use one capture group per key.
+- Only the policyholder / insured block counts. Never match the insurer's own AFM, DOY, phone or email (they are on every page); anchor on the holder's heading and do not run into the next block or the next label. An empty field must give no match, never the next label.
+- Omit keys the insurer does not print. phone and mobile are told apart by the number itself (69... = mobile), so either key may hold either. hp = tax horsepower, seats = passenger seats; skip for non-vehicle layouts.
+- Check: uv run python tools/test_details.py <insurer> --show, then compare the printed values with the text of each sample (right person, not the insurer, not a neighbouring label). Max 3 fix rounds, then leave the key out.
+- Reply with one line: "<insurer>: N templates, details: <keys found in all samples>, missing: <keys or none>".
+
 FINAL (orchestrator): collect lines into report.md as a table: insurer | templates | unresolved fields.
