@@ -46,7 +46,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "2.4.0"
+VERSION = "3.0.0"
 
 
 CUSTOMER_KEY_ROLE = Qt.ItemDataRole.UserRole + 1
