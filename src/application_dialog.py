@@ -1,5 +1,6 @@
 """Dialog that collects the data of an insurance application (Αίτηση)."""
 import re
+from html import escape
 
 from PyQt6.QtCore import QDate, QEvent, QPoint, QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QStandardItem, QStandardItemModel
@@ -34,10 +35,14 @@ from application_pdf import (
     WIDE_FIELDS,
 )
 from helpers import DarkCheckBoxBorderStyle, show_message
-from policy_extractor import normalise_plate
+import names
+from policy_extractor import canonical_usage, normalise_plate
 
 FIELD_WIDTH = 230
 MIN_WIDTH = 760
+PDF_FILLED_STYLE = "QLineEdit {background-color: rgba(46, 160, 67, 0.18);}"
+PDF_NOTE_STYLE = "QLabel {background-color: rgba(240, 160, 0, 0.25); padding: 6px; border-radius: 4px;}"
+PDF_CONFLICT_STYLE = "QLineEdit {background-color: rgba(240, 160, 0, 0.25);}"
 DATE_KEYS = ("birth", "license_date", "other_driver_birth", "other_driver_license_date")
 
 
@@ -269,6 +274,7 @@ class ApplicationDialog(QDialog):
         self.extra_companies = ctx["extra_companies"]
         self.catalogs = ctx["catalogs"]
         self.customer = ctx["customer"]
+        self.packages = ctx.get("packages", [])
         self.setWindowTitle("Αίτηση ασφάλισης " + ctx["type"])
         self._checkbox_style = DarkCheckBoxBorderStyle()  # setStyle() doesn't take ownership
 
@@ -279,6 +285,12 @@ class ApplicationDialog(QDialog):
         content = QWidget()
         form = QVBoxLayout(content)
         form.addWidget(self._summary())
+        self.conflict_note = QLabel()
+        self.conflict_note.setTextFormat(Qt.TextFormat.RichText)
+        self.conflict_note.setWordWrap(True)
+        self.conflict_note.setStyleSheet(PDF_NOTE_STYLE)
+        self.conflict_note.hide()
+        form.addWidget(self.conflict_note)
         form.addWidget(self._customer_group())
         form.addWidget(self._asset_group())
         if self.is_vehicle:
@@ -312,6 +324,8 @@ class ApplicationDialog(QDialog):
         if self.is_vehicle:
             for company in ctx.get("extra_rows", ()):
                 self.add_extra_row(company)
+        self.pdf_conflicts = self._apply_pdf_details(ctx.get("pdf_details") or {})
+        self._show_conflicts()
         self._fitted = False
 
     def showEvent(self, event):
@@ -319,6 +333,59 @@ class ApplicationDialog(QDialog):
         if not self._fitted:  # sizes are only reliable once the widgets are shown
             self._fitted = True
             self._fit_to_content()
+
+    @staticmethod
+    def _same_value(a, b, key=""):
+        if key == "usage":  # periods, spaces, Latin/Greek letters and "Ιδιωτική" = "ΕΙΧ" do not matter
+            a, b = canonical_usage(a), canonical_usage(b)
+        digits_a, digits_b = re.sub(r"\D", "", a), re.sub(r"\D", "", b)
+        return names.name_key(a) == names.name_key(b) or (bool(digits_a) and digits_a == digits_b)
+
+    def _apply_pdf_details(self, details):
+        """Fill blank fields from the policy PDF (highlighted); keep what is already there.
+
+        Returns [(label, current value, PDF value)] for fields where the PDF differs.
+        """
+        edits = dict(self.customer_edits)
+        edits.update(self.vehicle_edits)
+        labels = dict(CUSTOMER_FIELDS + VEHICLE_FIELDS)
+        conflicts = []
+        for key, value in details.items():
+            edit = edits.get(key)
+            if edit is None:
+                continue
+            current = edit.text().strip()
+            if key == "plate":  # prefilled from the receipt window: green if the PDF gave it for a new car
+                if not self.loaded_plate and normalise_plate(current) == normalise_plate(value):
+                    edit.setToolTip("Από το PDF")
+                    edit.setStyleSheet(PDF_FILLED_STYLE)
+                    edit.textEdited.connect(lambda _text, e=edit: e.setStyleSheet(""))
+                continue
+            if not current:
+                edit.setText(value)
+                edit.setToolTip("Από το PDF")
+                edit.setStyleSheet(PDF_FILLED_STYLE)
+            elif not self._same_value(current, value, key):
+                conflicts.append((labels[key], current, value))
+                edit.setToolTip(f"PDF: {value}")
+                edit.setStyleSheet(PDF_CONFLICT_STYLE)
+            else:
+                continue
+            edit.textEdited.connect(lambda _text, e=edit: e.setStyleSheet(""))
+        return conflicts
+
+    def _show_conflicts(self):
+        """Note at the top listing what the PDF says where it differs from the saved value."""
+        if not self.pdf_conflicts:
+            return
+        lines = [
+            f"<b>{escape(label)}</b>: αποθηκευμένο «{escape(current)}» - PDF «{escape(pdf)}»"
+            for label, current, pdf in self.pdf_conflicts
+        ]
+        self.conflict_note.setText(
+            "Διαφορές από το PDF (κρατήθηκαν οι αποθηκευμένες τιμές):<br>" + "<br>".join(lines)
+        )
+        self.conflict_note.show()
 
     def _fit_to_content(self):
         """Open large enough to show everything; scroll only if the screen is too small."""
@@ -395,14 +462,14 @@ class ApplicationDialog(QDialog):
         self.edit_description = QPlainTextEdit()
         self.edit_description.setFixedHeight(70)
         self.edit_description.setPlaceholderText("π.χ. διεύθυνση και περιγραφή κατοικίας, στοιχεία σκάφους")
-        self.edit_package = QLineEdit()
+        self.cmb_package = self._package_combo()
         self.edit_insured_value = QLineEdit()
-        for edit in (self.edit_package, self.edit_insured_value):
+        for edit in (self.cmb_package, self.edit_insured_value):
             edit.setMaximumWidth(FIELD_WIDTH)
         grid.addWidget(QLabel("Περιγραφή"), 0, 0)
         grid.addWidget(self.edit_description, 0, 1)
         grid.addWidget(QLabel(f"Πακέτο εταιρίας ({self.ctx['company']})"), 1, 0)
-        grid.addWidget(self.edit_package, 1, 1)
+        grid.addWidget(self.cmb_package, 1, 1)
         grid.addWidget(QLabel("Ασφαλιζόμενη αξία"), 2, 0)
         grid.addWidget(self.edit_insured_value, 2, 1)
         grid.setColumnStretch(1, 1)
@@ -414,8 +481,8 @@ class ApplicationDialog(QDialog):
 
         package = QHBoxLayout()
         package.addWidget(QLabel(f"Πακέτο εταιρίας ({self.ctx['company']})"))
-        self.edit_package = QLineEdit()
-        package.addWidget(self.edit_package, 1)
+        self.cmb_package = self._package_combo()
+        package.addWidget(self.cmb_package, 1)
         layout.addLayout(package)
 
         covers = QHBoxLayout()
@@ -447,6 +514,28 @@ class ApplicationDialog(QDialog):
         return group
 
     # ---- behaviour ----------------------------------------------------
+
+    def _package_combo(self):
+        """Company packages to pick from; any other name can still be typed."""
+        combo = QComboBox()
+        combo.setEditable(True)
+        combo.addItems([p["name"] for p in self.packages])
+        combo.setCurrentIndex(-1)
+        combo.lineEdit().setPlaceholderText("Επιλογή ή πληκτρολόγηση πακέτου...")
+        combo.textActivated.connect(self._package_chosen)
+        return combo
+
+    def _package_chosen(self, name):
+        """A package fills in its covers; they can still be changed for this application."""
+        package = next(
+            (p for p in self.packages if names.name_key(p["name"]) == names.name_key(name)), None
+        )
+        if package is None or not self.is_vehicle:
+            return
+        if package["base_cover"]:
+            self.base_buttons[package["base_cover"]].setChecked(True)
+        for cover, check in self.optional_checks.items():
+            check.setChecked(cover in package["optional_covers"])
 
     def add_extra_row(self, company=""):
         row = ExtraRow(self, company)
@@ -546,7 +635,7 @@ class ApplicationDialog(QDialog):
             "amount": ctx["amount"],
             "date": ctx["date"],
             "customer": dict(self.customer_fields(), name=self.customer["name"]),
-            "package": self.edit_package.text().strip(),
+            "package": self.cmb_package.currentText().strip(),
         }
         if self.is_vehicle:
             data["asset"] = self.vehicle_fields()

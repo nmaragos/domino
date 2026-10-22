@@ -20,6 +20,7 @@ import application_pdf
 import covers
 import datafile
 import names
+import packages
 import policy_extractor
 from helpers import (
     Calculator,
@@ -93,6 +94,8 @@ class Receipt(QMainWindow):
         }
         self.amounts = {}
         self.used_files = {}
+        self.pdf_details = {}  # application-form data of the last main policy PDF
+        self.pdf_details_customer = ""  # customer in the form when that PDF was read
 
         self.data_file = str(self.settings.value("data_file", DATA_FILE))
         self.templates_dir = str(
@@ -104,7 +107,6 @@ class Receipt(QMainWindow):
             self.settings.value("archive_root", ARCHIVE_ROOT)
         )
         self.templates = policy_extractor.load_templates(self.templates_dir)
-        self.cover_catalogs = covers.load_catalogs()
         if not self.import_data(self.data_file, quiet=self.data_file != DATA_FILE):
             if self.data_file != DATA_FILE:
                 self.data_file = DATA_FILE
@@ -312,6 +314,7 @@ class Receipt(QMainWindow):
             return None
 
         values = policy_extractor.extract(text, template)
+        details = policy_extractor.extract_details(text, template)  # `text` is reused below
         missing = [field for field, value in values.items() if value is None]
 
         if zone == "main":
@@ -345,6 +348,10 @@ class Receipt(QMainWindow):
                 if field == "customer":
                     text = names.find_name(self.customer_index, text) or text
                 widget.setText(text)
+
+        if zone == "main":
+            self.pdf_details = dict(details, plate=values["plate"]) if values.get("plate") else details
+            self.pdf_details_customer = self.lineedit_customer.text().strip()
 
         self.amounts.pop(kind, None)
         if values.get("amount"):
@@ -434,6 +441,8 @@ class Receipt(QMainWindow):
         }
         self.amounts = {}
         self.used_files = {}
+        self.pdf_details = {}
+        self.pdf_details_customer = ""
         self.statusbar.clearMessage()
         self._update_files_used_label()
 
@@ -889,6 +898,15 @@ class Receipt(QMainWindow):
             {"name": name},
         )
 
+    def _pdf_details_for(self, customer_name):
+        """Details of the dropped policy PDF, unless the customer was changed since."""
+        changed = self.pdf_details_customer and (
+            names.name_key(self.pdf_details_customer) != names.name_key(customer_name)
+        )
+        if changed:
+            return {}
+        return self.pdf_details
+
     def open_application(self):
         """Collect the data of an insurance application, then save or print it."""
         customer_name = self.lineedit_customer.text().strip()
@@ -912,6 +930,17 @@ class Receipt(QMainWindow):
             )
             if cmb.currentText()
         ]
+        company = self.cmb_insurance_company.currentText()
+        # packages and cover catalogues live next to record.json and are read on every use
+        company_packages, problems = packages.load(packages.path(self.data_file))
+        cover_catalogs, cover_problems = covers.load(self.data_file)
+        problems += cover_problems
+        if problems:
+            show_message(
+                "Προβλήματα στα αρχεία πακέτων / καλύψεων (τα στοιχεία αυτά δεν εμφανίζονται):",
+                msg_details="\n".join(problems),
+                msg_type="Warning",
+            )
         dialog = application_dialog.ApplicationDialog(
             {
                 "type": insurance_type,
@@ -922,9 +951,11 @@ class Receipt(QMainWindow):
                 "date": QDate.currentDate().toString("dd/MM/yyyy"),
                 "customer": self._saved_customer(customer_name),
                 "plate": self.lineedit_plate.text().strip(),
+                "packages": packages.for_company(company_packages, company, insurance_type),
+                "pdf_details": self._pdf_details_for(customer_name),
                 "extra_companies": extra_companies,
                 "extra_rows": extra_rows,
-                "catalogs": self.cover_catalogs,
+                "catalogs": cover_catalogs,
             },
             self,
         )

@@ -17,7 +17,9 @@ PyQt6 desktop app (Windows, Greek UI) that prints insurance receipts. Dropping p
 ## Application form (Αίτηση)
 - "Αίτηση" button (`btn_print`) -> `application_dialog.ApplicationDialog` -> `application_pdf` (HTML -> PDF via Qt, one A4 page). Decisions: `docs/GOALS.md`.
 - Customer details (TIN, address, ...) and `vehicles` (per plate) are stored on the customer entry in `record.json` via `datafile.update_customer`.
-- Extra-cover catalogues: `covers/<company>.json`, keyed by the `record.json` company name. Layout self-check: `uv run python tools\test_application.py` (needs a normal desktop session; offscreen has no fonts).
+- Extra-cover catalogues: `covers/<company>.json`, keyed by the `record.json` company name. Live copy = a `covers` folder next to `record.json` (hand-edited, read on every use, no rebuild); the bundled `covers/` is only the fallback when that folder is missing. Layout self-check: `uv run python tools\test_application.py` (needs a normal desktop session; offscreen has no fonts).
+- Autofill from the policy PDF: optional template key `details` (regexes, same rules as `fields`) -> `policy_extractor.extract_details` (normalisers in `normalise_details`) -> `Receipt.pdf_details` -> dialog. The PDF only fills blank fields (green); different saved values are kept, orange, and listed in a message. Check with `uv run python tools/test_details.py <insurer> [--show]` and compare with the text (never paste values anywhere); `tools/audit_details.py <insurer>...` flags office/insurer data, labels and suspicious identical values. The office's own emails are never taken as a customer's. Field list and rules: `claude_code_instructions.txt` (DETAILS section).
+- Company packages: `packages.json` in the `covers` folder next to `record.json` (`src/packages.py`, example `docs/packages.example.json`) -> dropdown in the dialog that ticks the covers. Edited by hand; a package manager is planned as a later feature.
 - Archive names: `ΑΙΤΗΣΗ_<plate|branch>_<yyyy.mm.dd>.pdf` and `ΑΠΟΔΕΙΞΗ_...` for receipts, same folder (`Receipt._archive_location`).
 
 ## Data and git

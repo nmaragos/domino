@@ -8,15 +8,17 @@ from helpers import resource_path
 
 OFFICE_NAME = "DOMINO GROUP I.K.E."
 OFFICE_LINES = (
-    "ΕΔΡΑ: ΤΑΣΗ ΚΑΖΑΖΗ 4, ΠΥΡΓΟΣ, 271 31 &nbsp; ΑΦΜ: 8018070260 &nbsp; ΔΟΥ: ΠΥΡΓΟΥ",
+    "ΕΔΡΑ: ΤΑΣΗ ΚΑΖΑΖΗ 4, ΠΥΡΓΟΣ, 271 31 &nbsp; ΑΦΜ: 801070260 &nbsp; ΔΟΥ: ΠΥΡΓΟΥ",
     "ΤΗΛ: 26210 26503 &nbsp; www.dominogroup.gr &nbsp; e-mail: info@dominogroup.gr",
 )
 PLACE = "ΠΥΡΓΟΣ ΗΛΕΙΑΣ"
 VEHICLE_TYPE = "ΑΥΤΟΚΙΝΗΤΟΥ"
+TITLE_PT = 15  # size of the title ...
+TITLE_FIT_CHARS = 34  # ... up to this many characters, smaller beyond
 MIN_SCALE = 0.6  # smallest shrink to fit one page
 
 # Exactly one of BASE_COVERS, any number of OPTIONAL_COVERS (vehicle applications only).
-BASE_COVERS = ("ΑΠΛΗ ΑΣΤΙΚΗ ΕΥΘΥΝΗ", "ΠΥΡΟΣ - ΚΛΟΠΗ", "ΙΔΙΕΣ ΖΗΜΙΕΣ")
+BASE_COVERS = ("ΑΣΤΙΚΗ ΕΥΘΥΝΗ", "ΠΥΡΟΣ - ΚΛΟΠΗ", "ΙΔΙΕΣ ΖΗΜΙΕΣ")
 OPTIONAL_COVERS = ("ΘΡΑΥΣΗ ΚΡΥΣΤΑΛΛΩΝ", "ΝΟΜΙΚΗ ΠΡΟΣΤΑΣΙΑ", "ΟΔΙΚΗ ΒΟΗΘΕΙΑ")
 
 # (key stored on the customer in record.json, label)
@@ -45,7 +47,7 @@ VEHICLE_FIELDS = (
     ("usage", "Χρήση"),
     ("make", "Εργ. κατασκευής"),
     ("model", "Μοντέλο"),
-    ("hp", "Ίπποι"),
+    ("hp", "Φορολογ. ίπποι"),
     ("seats", "Θέσεις"),
     ("color", "Χρώμα"),
 )
@@ -65,7 +67,7 @@ _DECLARATION_1 = (
 )
 _DECLARATION_2_CIVIL = (
     " Εφ΄ όσον η Εταιρία αποδεχθεί τον κίνδυνο, η ισχύς της κάλυψης Αστικής Ευθύνης "
-    "τρίτων (Ν 489/76, κωδικ. Π.Δ. 237/86 και τροπ. εν ισχύι Ν3557/2007) και η "
+    "τρίτων (Ν 489/76, κωδικ. Π.Δ. 237/86 και τροπ. εν ισχύ Ν3557/2007) και η "
     "ημερομηνία έναρξής της θα αποδεικνύεται ΜΟΝΟ από το ΑΣΦΑΛΙΣΤΗΡΙΟ ΣΥΜΒΟΛΑΙΟ "
     "που εκδίδει η Εταιρία από τα κεντρικά γραφεία της. Σε ότι αφορά στις υπόλοιπες "
     "καλύψεις και τα κεφάλαιά τους, η ισχύς τους και η ημερομηνία έναρξης τους "
@@ -243,10 +245,13 @@ def _declaration_section(data):
 
 
 def build_html(data):
-    title = "ΑΙΤΗΣΗ ΑΣΦΑΛΙΣΗΣ " + _e(data.get("type"))
+    title_text = "ΑΙΤΗΣΗ ΑΣΦΑΛΙΣΗΣ " + str(data.get("type") or "")
+    # one line, always: no break opportunities, and a smaller size for the longest types
+    title_pt = min(TITLE_PT, TITLE_PT * TITLE_FIT_CHARS / len(title_text))
+    title = _e(title_text).replace(" ", "&nbsp;")
     header = (
         '<table width="100%" cellspacing="0" cellpadding="0"><tr>'
-        '<td width="52%" valign="middle">'
+        '<td valign="middle">'
         '<table cellspacing="0" cellpadding="0"><tr>'
         '<td valign="middle"><img src="logo" width="68" height="68"></td>'
         '<td width="10"></td>'
@@ -255,8 +260,8 @@ def build_html(data):
         f'<span style="font-size:8pt;font-weight:600;color:{_MUTED};">ΑΣΦΑΛΙΣΤΙΚΟΙ ΠΡΑΚΤΟΡΕΣ</span>'
         '</td></tr></table>'
         '</td>'
-        '<td width="48%" valign="middle" align="right">'
-        f'<span style="font-size:15pt;font-weight:700;color:{_DARK};">{title}</span>'
+        '<td valign="middle" align="right" style="white-space:nowrap;">'
+        f'<span style="font-size:{title_pt:.1f}pt;font-weight:700;color:{_DARK};white-space:nowrap;">{title}</span>'
         "</td></tr></table>"
         f'<p style="font-size:6.5pt;color:{_MUTED};margin-top:3px;margin-bottom:0;">'
         f"{OFFICE_LINES[0]}<br>{OFFICE_LINES[1]}</p>"

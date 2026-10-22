@@ -1,0 +1,55 @@
+{
+  "_readme": "Copy to the covers folder next to record.json as packages.json and fill in the covers. type '' = every insurance type. base_cover: ΑΣΤΙΚΗ ΕΥΘΥΝΗ | ΠΥΡΟΣ - ΚΛΟΠΗ | ΙΔΙΕΣ ΖΗΜΙΕΣ | '' ; optional_covers: any of ΘΡΑΥΣΗ ΚΡΥΣΤΑΛΛΩΝ, ΝΟΜΙΚΗ ΠΡΟΣΤΑΣΙΑ, ΟΔΙΚΗ ΒΟΗΘΕΙΑ (the covers the package already includes). company/type must equal the names in record.json. 'included' and 'available_options' are notes for people, the app ignores them.",
+  "packages": [
+    {
+      "company": "ΔΥΝΑΜΙΣ",
+      "type": "ΑΥΤΟΚΙΝΗΤΟΥ",
+      "name": "Drive Basic",
+      "base_cover": "ΑΣΤΙΚΗ ΕΥΘΥΝΗ",
+      "optional_covers": [],
+      "included": [
+        "Αστική Ευθύνη προς τρίτους (Σωματικές Βλάβες) €1.300.000",
+        "Αστική Ευθύνη προς τρίτους (Υλικές Ζημιές) €1.300.000",
+        "Αστική Ευθύνη εντός φυλασσόμενων χώρων (πορθμεία, συνεργεία κοκ.)",
+        "Υλικές Ζημιές από ανασφάλιστο όχημα €50.000",
+        "Φροντίδα ατυχήματος και Ρυμούλκηση συνεπεία ατυχήματος",
+        "Επέκταση Αστικής Ευθύνης στο Εξωτερικό (Απαιτείται έκδοση Πράσινης Κάρτας)",
+        "Προσωπικό Ατύχημα οδηγού για θάνατο ή μόνιμη ολική ή μερική ανικανότητα €10.000",
+        "Πυρκαγιά από δάσος",
+        "Πλημμύρα συνεπεία ακραίων καιρικών φαινομένων"
+      ],
+      "available_options": [
+        "Θρ. Κρυστάλλων σε συν/να Συνεργ ή Απαλλαγή €200 €1.500",
+        "Θρ.Κρυστάλλων GLASSDRIVE ή ΦΙΛΗΣ GLASS ή Απαλλαγή €200 €1.500",
+        "Νομική Προστασία ΔΥΝΑΜΙΣ €1.000",
+        "Νομική Προστασία ΔΥΝΑΜΙΣ €1.800",
+        "Νομική Προστασία ΔΥΝΑΜΙΣ €3.000",
+        "Οδική Βοήθεια BASIC (Basic Mondial)",
+        "Οδική Βοήθεια MEDIUM (Medium Mondial)",
+        "Οδική Βοήθεια ΠΛΗΡΗΣ (Πλήρης Mondial)",
+        "Σεισμός"
+      ]
+    },
+    {
+      "company": "ΔΥΝΑΜΙΣ",
+      "type": "ΑΥΤΟΚΙΝΗΤΟΥ",
+      "name": "Drive Plus",
+      "base_cover": "",
+      "optional_covers": []
+    },
+    {
+      "company": "ΔΥΝΑΜΙΣ",
+      "type": "ΑΥΤΟΚΙΝΗΤΟΥ",
+      "name": "Drive Full",
+      "base_cover": "",
+      "optional_covers": []
+    },
+    {
+      "company": "HELLAS DIRECT",
+      "type": "ΑΥΤΟΚΙΝΗΤΟΥ",
+      "name": "Blue Cars",
+      "base_cover": "",
+      "optional_covers": []
+    }
+  ]
+}
