@@ -46,7 +46,7 @@ RADIO_GRP_MAPPING = {
     -5: 12,
     -6: 0
 }
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 
 
 CUSTOMER_KEY_ROLE = Qt.ItemDataRole.UserRole + 1
@@ -1176,8 +1176,8 @@ class Receipt(QMainWindow):
 
     def about(self):
         show_message(
-            f"Απόδειξη Παραλαβής και Είσπραξης Ασφαλιστηρίου Συμβολαίου \
-                v{VERSION} - DOMINO GROUP (2023)"
+            f"Front Office - v{VERSION}\nDOMINO GROUP (2026)",
+            align_center=True
         )
 
 

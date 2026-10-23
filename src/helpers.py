@@ -262,7 +262,8 @@ def show_message(
         msg_text,
         msg_details=None,
         msg_title="DOMINO Insurance",
-        msg_type="Information"
+        msg_type="Information",
+        align_center=False
 ):
     msg_box = QMessageBox(QMessageBox.Icon.Information, msg_title, msg_text)
 
@@ -281,12 +282,18 @@ def show_message(
         msg_box.setStyleSheet("QDialog {border: 1px solid palette(mid);}")
 
     msg_box.setText(msg_text)
+    
     if msg_details:
         msg_box.setDetailedText(msg_details)
 
     if msg_type == "no_buttons":
         msg_box.show()
         return msg_box
+    
+    if align_center:
+        text_label = msg_box.findChild(QLabel, "qt_msgbox_label")
+        if text_label:
+            text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     return msg_box.exec()
 
